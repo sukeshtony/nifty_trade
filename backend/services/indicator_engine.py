@@ -106,22 +106,43 @@ def calculate_atr(df: pd.DataFrame, period: int = 14) -> Optional[float]:
 # ── Volume Spike Detection ──
 
 def detect_volume_spike(df: pd.DataFrame, threshold: float = 2.0) -> Dict[str, Any]:
-    """Detect if current volume is significantly above average."""
-    if len(df) < 20:
-        return {"spike": False, "relative_volume": None}
+    """
+    Detect if current volume is significantly above average.
 
-    avg_vol = df["volume"].iloc[-20:].mean()
+    Also determines directional bias of the spike based on last candle
+    body direction and size.  A volume spike only counts as directional
+    confirmation when the triggering candle has a meaningful body.
+    """
+    if len(df) < 20:
+        return {"spike": False, "relative_volume": None, "direction": "neutral"}
+
+    # Use prior 19 candles (exclude current) to avoid comparing a candle to itself
+    avg_vol     = df["volume"].iloc[-20:-1].mean()
     current_vol = float(df["volume"].iloc[-1])
 
     if avg_vol == 0:
-        return {"spike": False, "relative_volume": None}
+        return {"spike": False, "relative_volume": None, "direction": "neutral"}
 
     relative = current_vol / avg_vol
+
+    # Determine candle direction for the spike bar
+    last        = df.iloc[-1]
+    body        = last["close"] - last["open"]
+    rng         = last["high"] - last["low"]
+    body_ratio  = abs(body) / rng if rng > 0 else 0
+
+    if body_ratio >= 0.35:
+        direction = "bullish" if body > 0 else "bearish"
+    else:
+        direction = "neutral"  # indecisive candle — spike is ambiguous
+
     return {
-        "spike": relative >= threshold,
+        "spike":           relative >= threshold,
         "relative_volume": round(relative, 2),
-        "current_volume": int(current_vol),
-        "avg_volume": int(avg_vol),
+        "current_volume":  int(current_vol),
+        "avg_volume":      int(avg_vol),
+        "direction":       direction,
+        "body_ratio":      round(body_ratio, 3),
     }
 
 
