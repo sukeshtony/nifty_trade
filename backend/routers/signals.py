@@ -17,6 +17,8 @@ from services.regime_detector import regime_detector
 from services.candle_analyzer import analyze_last_candle
 from services.risk_engine import risk_engine
 from utils.cache import cache
+from utils.helpers import attach_metadata
+import time
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/signals", tags=["Signals"])
@@ -26,19 +28,12 @@ router = APIRouter(prefix="/api/signals", tags=["Signals"])
 def get_current_signal(db: Session = Depends(get_db)):
     """
     Generate current trading signal from live data.
-
-    Processing order:
-      1. Market state (WebSocket ticks)
-      2. Candle indicators (cached)
-      3. Options analysis (cached)
-      4. Regime detection
-      5. Candle strength analysis
-      6. Strategy decision engine
-      7. Risk plan (only for BUY_CE/BUY_PE)
-      8. DB store (throttled)
     """
+    start_time = time.time()
     # ── 1. Market state ───────────────────────────────────────────────────────
     state = market_state_manager.get_state("NIFTY")
+    
+    source = "LIVE" if state and state.get("current_price") else "CACHE"
 
     # ── 2. Candle indicators ──────────────────────────────────────────────────
     candles = cache.get("candles:NIFTY:ONE_MINUTE")
@@ -104,7 +99,7 @@ def get_current_signal(db: Session = Depends(get_db)):
     _maybe_store_signal(db, signal_result)
 
     # ── Build response ────────────────────────────────────────────────────────
-    return {
+    response_data = {
         # Core signal
         "signal":          signal_result.get("final_signal", "NO_TRADE"),
         "direction":       signal_result.get("direction", "SIDEWAYS"),
@@ -151,6 +146,9 @@ def get_current_signal(db: Session = Depends(get_db)):
             "oi_resistance": options_data.get("oi_resistance"),
         },
     }
+
+    logger.info(f"[DATA_SOURCE] endpoint=/api/signals/current source={source}")
+    return attach_metadata(response_data, source, start_time)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

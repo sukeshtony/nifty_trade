@@ -174,7 +174,7 @@ export default function PaperTrading() {
              <button
                onClick={() => handlePlaceTrade('CE')}
                style={{ 
-                 flex: 1, borderRadius: 'var(--radius-md)', border: 'none', 
+                 flex: 1, borderRadius: 'var(--radius-md)', 
                  background: 'rgba(34, 197, 94, 0.1)', color: 'var(--success)', 
                  cursor: 'pointer', display: 'flex', flexDirection: 'column', 
                  alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -191,7 +191,7 @@ export default function PaperTrading() {
              <button
                onClick={() => handlePlaceTrade('PE')}
                style={{ 
-                 flex: 1, borderRadius: 'var(--radius-md)', border: 'none', 
+                 flex: 1, borderRadius: 'var(--radius-md)', 
                  background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', 
                  cursor: 'pointer', display: 'flex', flexDirection: 'column', 
                  alignItems: 'center', justifyContent: 'center', gap: '8px',

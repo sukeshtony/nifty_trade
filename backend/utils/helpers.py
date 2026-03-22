@@ -52,3 +52,27 @@ SYMBOL_TOKENS = {
 
 # Estimated brokerage charges per trade (one side)
 ESTIMATED_CHARGES_PER_LOT = 40.0  # Approx brokerage + taxes per lot per side
+
+
+import time
+
+def attach_metadata(data: dict, source: str, start_time: float) -> dict:
+    """Attach data source and staleness metadata to a dictionary."""
+    now = time.time()
+    latency = (now - start_time) * 1000
+
+    data["data_source"] = source
+    data["timestamp"] = now
+    data["latency_ms"] = round(latency, 2)
+
+    # staleness logic
+    if source == "LIVE":
+        data["is_stale"] = False
+    elif source == "CACHE":
+        data["is_stale"] = True
+    elif source == "API":
+        data["is_stale"] = True
+    else:
+        data["is_stale"] = False # Default or DB
+
+    return data

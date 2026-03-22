@@ -8,6 +8,11 @@ from datetime import datetime
 
 from database.connection import get_db
 from services.trade_service import trade_service
+from utils.helpers import attach_metadata
+import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/trades", tags=["Trades"])
 
@@ -33,40 +38,55 @@ class TradeClose(BaseModel):
 @router.post("")
 def create_trade(trade_data: TradeCreate, db: Session = Depends(get_db)):
     """Record a new trade."""
+    start_time = time.time()
     trade = trade_service.record_trade(db, trade_data.model_dump())
-    return {"message": "Trade recorded", "trade_id": trade.id}
+    response = {"message": "Trade recorded", "trade_id": trade.id}
+    logger.info("[DATA_SOURCE] endpoint=/api/trades source=DB")
+    return attach_metadata(response, "DB", start_time)
 
 
 @router.put("/{trade_id}/close")
 def close_trade(trade_id: int, data: TradeClose, db: Session = Depends(get_db)):
     """Close an open trade with exit price."""
+    start_time = time.time()
     trade = trade_service.close_trade(db, trade_id, data.exit_price)
     if not trade:
         raise HTTPException(status_code=404, detail="Trade not found or already closed")
-    return {
+    response = {
         "message": "Trade closed",
         "trade_id": trade.id,
         "pnl": trade.pnl,
         "net_pnl": trade.net_pnl,
         "charges": trade.charges,
     }
+    logger.info(f"[DATA_SOURCE] endpoint=/api/trades/{trade_id}/close source=DB")
+    return attach_metadata(response, "DB", start_time)
 
 
 @router.get("/active")
 def get_active_trades(db: Session = Depends(get_db)):
     """Get all open trades."""
+    start_time = time.time()
     trades = trade_service.get_active_trades(db)
-    return {"trades": trades, "count": len(trades)}
+    response = {"trades": trades, "count": len(trades)}
+    logger.info("[DATA_SOURCE] endpoint=/api/trades/active source=DB")
+    return attach_metadata(response, "DB", start_time)
 
 
 @router.get("/history")
 def get_trade_history(limit: int = 50, db: Session = Depends(get_db)):
     """Get closed trade history."""
+    start_time = time.time()
     trades = trade_service.get_trade_history(db, limit)
-    return {"trades": trades, "count": len(trades)}
+    response = {"trades": trades, "count": len(trades)}
+    logger.info("[DATA_SOURCE] endpoint=/api/trades/history source=DB")
+    return attach_metadata(response, "DB", start_time)
 
 
 @router.get("/summary")
 def get_trade_summary(db: Session = Depends(get_db)):
     """Get overall trading performance summary."""
-    return trade_service.get_trade_summary(db)
+    start_time = time.time()
+    response = trade_service.get_trade_summary(db)
+    logger.info("[DATA_SOURCE] endpoint=/api/trades/summary source=DB")
+    return attach_metadata(response, "DB", start_time)
