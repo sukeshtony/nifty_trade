@@ -47,6 +47,8 @@ class MarketDataService:
         self._nifty_fut_symbol: Optional[str] = None
         self._instrument_master: Optional[List] = None
         self._instrument_master_lock = threading.Lock()
+        self._oi_baselines = {}  # {token: initial_oi_of_day}
+        self._baseline_date = None
 
     # ── Authentication ──
 
@@ -415,6 +417,13 @@ class MarketDataService:
             except Exception as e:
                 logger.error(f"Option market data batch error: {e}")
 
+            # ── Stateful OI tracking for buildup ──
+            # Use today's date to manage daily reset
+            today = ist_now().date()
+            if self._baseline_date != today:
+                self._oi_baselines = {}
+                self._baseline_date = today
+
             # Build chain
             chain = []
             for strike in sorted(strikes):
@@ -428,32 +437,46 @@ class MarketDataService:
 
                 ce_info = ce_map.get(strike)
                 if ce_info:
-                    ce_data = all_market_data.get(ce_info["token"], {})
+                    token = str(ce_info["token"])
+                    ce_data = all_market_data.get(token, {})
                     if ce_data:
-                        row["callOI"] = ce_data.get("opnInterest", 0)
-                        row["callOIChg"] = ce_data.get("opnInterestChng", 0)
-                        row["callLTP"] = ce_data.get("ltp", 0)
-                        row["callVolume"] = ce_data.get("totTrdQnty", 0)
-                        row["callBuild"] = self._detect_buildup(
-                            ce_data.get("netChng", 0), ce_data.get("opnInterestChng", 0)
-                        )
+                        current_oi = ce_data.get("opnInterest", 0) or 0
+                        # Set baseline if not present (first fetch of the day)
+                        if token not in self._oi_baselines:
+                            self._oi_baselines[token] = current_oi
+                        
+                        row["callOI"] = current_oi
+                        # Calculate change since first fetch of the day
+                        row["callOIChg"] = (ce_data.get("opnInterestChng") or 
+                                            (current_oi - self._oi_baselines[token]) or 0)
+                        row["callLTP"] = ce_data.get("ltp", 0) or 0
+                        row["callVolume"] = ce_data.get("totTrdQnty", 0) or 0
+                        
+                        p_chg = ce_data.get("netChng") or ce_data.get("netChange") or 0
+                        row["callBuild"] = self._detect_buildup(p_chg, row["callOIChg"])
 
                 pe_info = pe_map.get(strike)
                 if pe_info:
-                    pe_data = all_market_data.get(pe_info["token"], {})
+                    token = str(pe_info["token"])
+                    pe_data = all_market_data.get(token, {})
                     if pe_data:
-                        row["putOI"] = pe_data.get("opnInterest", 0)
-                        row["putOIChg"] = pe_data.get("opnInterestChng", 0)
-                        row["putLTP"] = pe_data.get("ltp", 0)
-                        row["putVolume"] = pe_data.get("totTrdQnty", 0)
-                        row["putBuild"] = self._detect_buildup(
-                            pe_data.get("netChng", 0), pe_data.get("opnInterestChng", 0)
-                        )
+                        current_oi = pe_data.get("opnInterest", 0) or 0
+                        if token not in self._oi_baselines:
+                            self._oi_baselines[token] = current_oi
+
+                        row["putOI"] = current_oi
+                        row["putOIChg"] = (pe_data.get("opnInterestChng") or 
+                                           (current_oi - self._oi_baselines[token]) or 0)
+                        row["putLTP"] = pe_data.get("ltp", 0) or 0
+                        row["putVolume"] = pe_data.get("totTrdQnty", 0) or 0
+                        
+                        p_chg = pe_data.get("netChng") or pe_data.get("netChange") or 0
+                        row["putBuild"] = self._detect_buildup(p_chg, row["putOIChg"])
 
                 chain.append(row)
 
             if chain:
-                total_oi = sum(r.get("callOI", 0) + r.get("putOI", 0) for r in chain)
+                total_oi = sum((r.get("callOI") or 0) + (r.get("putOI") or 0) for r in chain)
                 if total_oi > 0:
                     cache.set(cache_key, chain, ttl=30)
                     return chain

@@ -5,6 +5,7 @@ Uses EMA(9, 21) per spec. Tracks VWAP, momentum, session support/resistance.
 
 import logging
 from typing import Dict, Any, Optional
+from utils.helpers import ist_now
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class MarketStateManager:
                 "ema_21": None,
                 "momentum": 0,
                 "session_high": 0,
-                "session_low": float("inf"),
+                "session_low": 0,
                 "atr": None,
                 "trend": {"ema_alignment": "SIDEWAYS", "above_vwap": None},
             }
@@ -124,7 +125,7 @@ class MarketStateManager:
             self.state[symbol]["session_low"] = min(today_lows)
         else:
             self.state[symbol]["session_high"] = max(highs) if highs else 0
-            self.state[symbol]["session_low"] = min(lows) if lows else float("inf")
+            self.state[symbol]["session_low"] = min(lows) if lows else 0
 
         # Compute change from previous day's last close
         if prev_day_closes:
@@ -205,7 +206,7 @@ class MarketStateManager:
         # Update session high/low
         if high and high > st["session_high"]:
             st["session_high"] = high
-        if low and low < st["session_low"]:
+        if low and low > 0 and (st["session_low"] == 0 or low < st["session_low"]):
             st["session_low"] = low
 
         # Update momentum (close-to-close)
@@ -233,7 +234,14 @@ class MarketStateManager:
 
     def get_state(self, symbol: str) -> Dict[str, Any]:
         """Get the current O(1) state without any recalculations."""
-        return self.state.get(symbol, {})
+        raw = self.state.get(symbol, {})
+        # Sanitize inf/nan — Python JSON encoder rejects them
+        import math
+        def _safe(v):
+            if isinstance(v, float) and (math.isinf(v) or math.isnan(v)):
+                return 0
+            return v
+        return {k: _safe(v) for k, v in raw.items()}
 
     def _check_ema_alignment(self, state: dict, price: float) -> str:
         """Check EMA trend alignment using EMA 9 and 21."""

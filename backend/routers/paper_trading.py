@@ -11,7 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/paper", tags=["Paper Trading"])
+router = APIRouter(prefix="/api/paper", tags=["Paper Trading"])
 
 
 class InitAccountRequest(BaseModel):
