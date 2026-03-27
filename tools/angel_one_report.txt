@@ -1,0 +1,839 @@
+[10:40:53.734]  
+======================================================================
+  ANGEL ONE SMART API — DATA AVAILABILITY TEST
+======================================================================
+[10:40:53.734]  Run time : 2026-03-27 10:40:53.734140
+[10:40:53.735]  Client ID: S1555479
+[10:40:53.735]  API Key  : xpaz****
+[10:40:53.735]  
+======================================================================
+  1. AUTHENTICATION
+======================================================================
+[10:40:53.755]  Generated TOTP: 303176
+[10:40:54.189]  Session status : True
+[10:40:54.189]  Session message: SUCCESS
+[10:40:54.189]  JWT token  : Bearer eyJhbGciOiJIUzUxMiJ9.ey...
+[10:40:54.190]  Feed token : eyJhbGciOiJIUzUxMiJ9...
+[10:40:54.190]  
+======================================================================
+  2. USER PROFILE
+======================================================================
+[10:40:54.369]  Name        : SUKESH TONY GNANA RAJAN
+[10:40:54.369]  Exchanges   : ['nse_fo', 'nse_cm', 'cde_fo', 'ncx_fo', 'bse_fo', 'bse_cm', 'mcx_fo']
+[10:40:54.369]  Products    : ['MARGIN', 'MIS', 'NRML', 'CNC', 'CO', 'BO']
+[10:40:54.369]  Broker      : 
+[10:40:54.369]  Full profile response:
+[10:40:54.370]    {
+[10:40:54.370]        "clientcode": "S1555479",
+[10:40:54.370]        "name": "SUKESH TONY GNANA RAJAN",
+[10:40:54.370]        "email": "",
+[10:40:54.371]        "mobileno": "",
+[10:40:54.371]        "exchanges": [
+[10:40:54.371]            "nse_fo",
+[10:40:54.371]            "nse_cm",
+[10:40:54.371]            "cde_fo",
+[10:40:54.371]            "ncx_fo",
+[10:40:54.371]            "bse_fo",
+[10:40:54.372]            "bse_cm",
+[10:40:54.372]            "mcx_fo"
+[10:40:54.372]        ],
+[10:40:54.372]        "products": [
+[10:40:54.372]            "MARGIN",
+[10:40:54.372]            "MIS",
+[10:40:54.372]            "NRML",
+[10:40:54.372]            "CNC",
+[10:40:54.372]            "CO",
+[10:40:54.372]            "BO"
+[10:40:54.372]        ],
+[10:40:54.372]        "lastlogintime": "",
+[10:40:54.372]        "broker": ""
+[10:40:54.372]    }
+[10:40:54.372]  
+======================================================================
+  3. LTP DATA (ltpData)
+======================================================================
+[10:40:54.372]  
+--- ltpData — NIFTY 50 index ---
+[10:40:54.556]  Response:
+[10:40:54.556]    {
+[10:40:54.556]        "status": true,
+[10:40:54.557]        "message": "SUCCESS",
+[10:40:54.557]        "errorcode": "",
+[10:40:54.557]        "data": {
+[10:40:54.557]            "exchange": "NSE",
+[10:40:54.558]            "tradingsymbol": "Nifty 50",
+[10:40:54.558]            "symboltoken": "99926000",
+[10:40:54.558]            "open": 23173.55,
+[10:40:54.558]            "high": 23186.1,
+[10:40:54.558]            "low": 22967.3,
+[10:40:54.558]            "close": 23306.45,
+[10:40:54.559]            "ltp": 23006.1
+[10:40:54.559]        }
+[10:40:54.559]    }
+[10:40:54.559]    [     OK     ]  ltp = 23006.1
+[10:40:54.559]    [     OK     ]  open = 23173.55
+[10:40:54.559]    [     OK     ]  high = 23186.1
+[10:40:54.559]    [     OK     ]  low = 22967.3
+[10:40:54.559]    [     OK     ]  close = 23306.45
+[10:40:54.559]    [ ZERO/EMPTY ]  tradingSymbol = None
+[10:40:54.559]    [ ZERO/EMPTY ]  symbolToken = None
+[10:40:54.559]    [     OK     ]  exchange = NSE
+[10:40:54.559]    Volume field present? NO
+[10:40:54.559]  
+--- ltpData — India VIX ---
+[10:40:54.725]  Response:
+[10:40:54.726]    {
+[10:40:54.726]        "status": true,
+[10:40:54.727]        "message": "SUCCESS",
+[10:40:54.727]        "errorcode": "",
+[10:40:54.727]        "data": {
+[10:40:54.727]            "exchange": "NSE",
+[10:40:54.728]            "tradingsymbol": "Nifty 500",
+[10:40:54.728]            "symboltoken": "99926004",
+[10:40:54.728]            "open": 21357.35,
+[10:40:54.728]            "high": 21364.35,
+[10:40:54.729]            "low": 21125.35,
+[10:40:54.729]            "close": 21478.2,
+[10:40:54.729]            "ltp": 21154.65
+[10:40:54.730]        }
+[10:40:54.730]    }
+[10:40:54.730]    [     OK     ]  ltp = 21154.65
+[10:40:54.730]    [     OK     ]  open = 21357.35
+[10:40:54.730]    [     OK     ]  high = 21364.35
+[10:40:54.730]    [     OK     ]  low = 21125.35
+[10:40:54.730]    [     OK     ]  close = 21478.2
+[10:40:54.730]    [ ZERO/EMPTY ]  tradingSymbol = None
+[10:40:54.731]    [ ZERO/EMPTY ]  symbolToken = None
+[10:40:54.731]    [     OK     ]  exchange = NSE
+[10:40:54.731]    Volume field present? NO
+[10:40:54.731]  
+======================================================================
+  4. FULL MARKET DATA (getMarketData mode=FULL)
+======================================================================
+[10:40:54.731]  
+--- getMarketData FULL — NSE:NIFTY index ---
+[10:40:54.930]    status  = True
+[10:40:54.930]    message = SUCCESS
+[10:40:54.930]    fetched     = 1 items
+[10:40:54.931]    unfulfilled = 0 items: []
+[10:40:54.931]  First fetched item (all fields):
+[10:40:54.931]    {
+[10:40:54.931]        "exchange": "NSE",
+[10:40:54.931]        "tradingSymbol": "Nifty 50",
+[10:40:54.931]        "symbolToken": "99926000",
+[10:40:54.931]        "ltp": 23006.1,
+[10:40:54.931]        "open": 23173.55,
+[10:40:54.931]        "high": 23186.1,
+[10:40:54.931]        "low": 22967.3,
+[10:40:54.931]        "close": 23306.45,
+[10:40:54.931]        "lastTradeQty": 0,
+[10:40:54.932]        "exchFeedTime": "27-Mar-2026 10:40:54",
+[10:40:54.932]        "exchTradeTime": "01-Jan-1970 05:30:00",
+[10:40:54.932]        "netChange": -300.35,
+[10:40:54.932]        "percentChange": -1.29,
+[10:40:54.932]        "avgPrice": 0.0,
+[10:40:54.932]        "tradeVolume": 0,
+[10:40:54.932]        "opnInterest": 0,
+[10:40:54.932]        "lowerCircuit": 0.0,
+[10:40:54.932]        "upperCircuit": 0.0,
+[10:40:54.932]        "totBuyQuan": 0,
+[10:40:54.932]        "totSellQuan": 0,
+[10:40:54.932]        "52WeekLow": 0.0,
+[10:40:54.932]        "52WeekHigh": 0.0,
+[10:40:54.932]        "depth": {
+[10:40:54.932]            "buy": [
+[10:40:54.933]                {
+[10:40:54.933]                    "price": 0.0,
+[10:40:54.933]                    "quantity": 0,
+[10:40:54.933]                    "orders": 0
+[10:40:54.933]                },
+[10:40:54.933]                {
+[10:40:54.933]                    "price": 0.0,
+[10:40:54.933]                    "quantity": 0,
+[10:40:54.933]                    "orders": 0
+[10:40:54.933]                },
+[10:40:54.933]                {
+[10:40:54.933]                    "price": 0.0,
+[10:40:54.933]                    "quantity": 0,
+[10:40:54.933]                    "orders": 0
+[10:40:54.933]                },
+[10:40:54.933]                {
+[10:40:54.933]                    "price": 0.0,
+[10:40:54.934]                    "quantity": 0,
+[10:40:54.934]                    "orders": 0
+[10:40:54.934]                },
+[10:40:54.934]                {
+[10:40:54.934]                    "price": 0.0,
+[10:40:54.934]                    "quantity": 0,
+[10:40:54.934]                    "orders": 0
+[10:40:54.934]                }
+[10:40:54.934]            ],
+[10:40:54.934]            "sell": [
+[10:40:54.934]                {
+[10:40:54.934]                    "price": 0.0,
+[10:40:54.934]                    "quantity": 0,
+[10:40:54.934]                    "orders": 0
+[10:40:54.934]                },
+[10:40:54.934]                {
+[10:40:54.934]                    "price": 0.0,
+[10:40:54.934]                    "quantity": 0,
+[10:40:54.934]                    "orders": 0
+[10:40:54.934]                },
+[10:40:54.935]                {
+[10:40:54.935]                    "price": 0.0,
+[10:40:54.935]                    "quantity": 0,
+[10:40:54.935]                    "orders": 0
+[10:40:54.935]                },
+[10:40:54.935]                {
+[10:40:54.935]                    "price": 0.0,
+[10:40:54.935]                    "quantity": 0,
+[10:40:54.935]                    "orders": 0
+[10:40:54.935]                },
+[10:40:54.935]                {
+[10:40:54.935]                    "price": 0.0,
+[10:40:54.935]                    "quantity": 0,
+[10:40:54.935]                    "orders": 0
+[10:40:54.935]                }
+[10:40:54.935]            ]
+[10:40:54.936]        }
+[10:40:54.936]    }
+[10:40:54.936]    [     OK     ]  ltp = 23006.1
+[10:40:54.936]    [     OK     ]  open = 23173.55
+[10:40:54.936]    [     OK     ]  high = 23186.1
+[10:40:54.936]    [     OK     ]  low = 22967.3
+[10:40:54.936]    [     OK     ]  close = 23306.45
+[10:40:54.936]    [ ZERO/EMPTY ]  totTrdQnty = None
+[10:40:54.936]    [ ZERO/EMPTY ]  totTrdVal = None
+[10:40:54.936]    [ ZERO/EMPTY ]  opnInterest = 0
+[10:40:54.937]    [ ZERO/EMPTY ]  opnInterestChng = None
+[10:40:54.937]    [ ZERO/EMPTY ]  netChng = None
+[10:40:54.937]    [ ZERO/EMPTY ]  pctChng = None
+[10:40:54.937]  
+  >>> VOLUME (totTrdQnty) = 0  <-- ZERO / NO VOLUME
+[10:40:54.937]  
+--- getMarketData FULL — NSE:INDIAVIX ---
+[10:40:55.112]    status  = True
+[10:40:55.112]    message = SUCCESS
+[10:40:55.112]    fetched     = 1 items
+[10:40:55.113]    unfulfilled = 0 items: []
+[10:40:55.113]  First fetched item (all fields):
+[10:40:55.113]    {
+[10:40:55.113]        "exchange": "NSE",
+[10:40:55.113]        "tradingSymbol": "Nifty 500",
+[10:40:55.114]        "symbolToken": "99926004",
+[10:40:55.114]        "ltp": 21154.6,
+[10:40:55.114]        "open": 21357.35,
+[10:40:55.114]        "high": 21364.35,
+[10:40:55.114]        "low": 21125.35,
+[10:40:55.115]        "close": 21478.2,
+[10:40:55.115]        "lastTradeQty": 0,
+[10:40:55.115]        "exchFeedTime": "27-Mar-2026 10:40:54",
+[10:40:55.115]        "exchTradeTime": "01-Jan-1970 05:30:00",
+[10:40:55.115]        "netChange": -323.6,
+[10:40:55.115]        "percentChange": -1.51,
+[10:40:55.115]        "avgPrice": 0.0,
+[10:40:55.115]        "tradeVolume": 0,
+[10:40:55.115]        "opnInterest": 0,
+[10:40:55.115]        "lowerCircuit": 0.0,
+[10:40:55.115]        "upperCircuit": 0.0,
+[10:40:55.116]        "totBuyQuan": 0,
+[10:40:55.116]        "totSellQuan": 0,
+[10:40:55.116]        "52WeekLow": 0.0,
+[10:40:55.116]        "52WeekHigh": 0.0,
+[10:40:55.116]        "depth": {
+[10:40:55.116]            "buy": [
+[10:40:55.116]                {
+[10:40:55.116]                    "price": 0.0,
+[10:40:55.116]                    "quantity": 0,
+[10:40:55.116]                    "orders": 0
+[10:40:55.116]                },
+[10:40:55.116]                {
+[10:40:55.116]                    "price": 0.0,
+[10:40:55.116]                    "quantity": 0,
+[10:40:55.116]                    "orders": 0
+[10:40:55.117]                },
+[10:40:55.117]                {
+[10:40:55.117]                    "price": 0.0,
+[10:40:55.117]                    "quantity": 0,
+[10:40:55.117]                    "orders": 0
+[10:40:55.117]                },
+[10:40:55.117]                {
+[10:40:55.117]                    "price": 0.0,
+[10:40:55.117]                    "quantity": 0,
+[10:40:55.117]                    "orders": 0
+[10:40:55.117]                },
+[10:40:55.117]                {
+[10:40:55.117]                    "price": 0.0,
+[10:40:55.118]                    "quantity": 0,
+[10:40:55.118]                    "orders": 0
+[10:40:55.118]                }
+[10:40:55.118]            ],
+[10:40:55.118]            "sell": [
+[10:40:55.118]                {
+[10:40:55.118]                    "price": 0.0,
+[10:40:55.118]                    "quantity": 0,
+[10:40:55.118]                    "orders": 0
+[10:40:55.118]                },
+[10:40:55.118]                {
+[10:40:55.118]                    "price": 0.0,
+[10:40:55.119]                    "quantity": 0,
+[10:40:55.119]                    "orders": 0
+[10:40:55.119]                },
+[10:40:55.119]                {
+[10:40:55.119]                    "price": 0.0,
+[10:40:55.119]                    "quantity": 0,
+[10:40:55.119]                    "orders": 0
+[10:40:55.119]                },
+[10:40:55.119]                {
+[10:40:55.119]                    "price": 0.0,
+[10:40:55.119]                    "quantity": 0,
+[10:40:55.119]                    "orders": 0
+[10:40:55.119]                },
+[10:40:55.119]                {
+[10:40:55.120]                    "price": 0.0,
+[10:40:55.120]                    "quantity": 0,
+[10:40:55.120]                    "orders": 0
+[10:40:55.120]                }
+[10:40:55.120]            ]
+[10:40:55.120]        }
+[10:40:55.120]    }
+[10:40:55.120]    [     OK     ]  ltp = 21154.6
+[10:40:55.120]    [     OK     ]  open = 21357.35
+[10:40:55.120]    [     OK     ]  high = 21364.35
+[10:40:55.121]    [     OK     ]  low = 21125.35
+[10:40:55.121]    [     OK     ]  close = 21478.2
+[10:40:55.121]    [ ZERO/EMPTY ]  totTrdQnty = None
+[10:40:55.121]    [ ZERO/EMPTY ]  totTrdVal = None
+[10:40:55.121]    [ ZERO/EMPTY ]  opnInterest = 0
+[10:40:55.121]    [ ZERO/EMPTY ]  opnInterestChng = None
+[10:40:55.121]    [ ZERO/EMPTY ]  netChng = None
+[10:40:55.121]    [ ZERO/EMPTY ]  pctChng = None
+[10:40:55.121]  
+  >>> VOLUME (totTrdQnty) = 0  <-- ZERO / NO VOLUME
+[10:40:55.121]  
+======================================================================
+  5. CANDLE DATA (getCandleData)
+======================================================================
+[10:40:55.122]  
+--- getCandleData — NIFTY 50 index — 1min ---
+[10:40:55.284]    status  = False
+[10:40:55.284]    message = Too many requests
+[10:40:55.284]    FAILED: {'message': 'Too many requests', 'errorcode': 'AB1019', 'status': False, 'data': None}
+[10:40:55.284]  
+--- getCandleData — NIFTY 50 index — 5min ---
+[10:40:55.458]    status  = False
+[10:40:55.458]    message = Too many requests
+[10:40:55.458]    FAILED: {'message': 'Too many requests', 'errorcode': 'AB1019', 'status': False, 'data': None}
+[10:40:55.459]  
+======================================================================
+  6. INSTRUMENT MASTER — Find Nifty Futures & Options Tokens
+======================================================================
+[10:40:55.459]  
+--- Download instrument master from Angel One CDN ---
+[10:41:00.441]    Total instruments: 195235
+[10:41:00.454]    NFO instruments: 53456
+[10:41:00.459]    NIFTY Futures contracts found: 3
+[10:41:00.462]  
+  Nearest Nifty Futures:
+[10:41:00.462]      symbol   = NIFTY30MAR26FUT
+[10:41:00.462]      token    = 51714
+[10:41:00.463]      expiry   = 30MAR2026
+[10:41:00.463]      lotsize  = 65
+[10:41:00.466]  
+  NIFTY Options contracts found: 2103
+[10:41:00.467]    Nearest expiry: 05MAY2026
+[10:41:00.467]    All expiries (first 5): ['05MAY2026', '07APR2026', '13APR2026', '21APR2026', '24DEC2029']
+[10:41:00.468]    Strikes available (nearest expiry, sample): [21150, 21200, 21250, 21300, 21350, 21400, 21450, 21500, 21550, 21600]
+[10:41:00.468]  
+  Sample CE option: NIFTY05MAY2621950CE token=73729
+[10:41:00.468]    Sample PE option: NIFTY05MAY2622300PE token=73751
+[10:41:00.468]  
+======================================================================
+  7. NIFTY FUTURES — Full Market Data (with Volume)
+======================================================================
+[10:41:00.469]  
+--- getMarketData FULL — NIFTY30MAR26FUT (NFO) ---
+[10:41:00.651]    status  = True
+[10:41:00.652]    message = SUCCESS
+[10:41:00.652]    fetched     = 1
+[10:41:00.652]    unfulfilled = 0: []
+[10:41:00.652]  Futures full data (all fields):
+[10:41:00.653]    {
+[10:41:00.653]        "exchange": "NFO",
+[10:41:00.653]        "tradingSymbol": "NIFTY30MAR26FUT",
+[10:41:00.653]        "symbolToken": "51714",
+[10:41:00.653]        "ltp": 23013.5,
+[10:41:00.654]        "open": 23160.0,
+[10:41:00.654]        "high": 23168.5,
+[10:41:00.654]        "low": 22971.0,
+[10:41:00.654]        "close": 23300.0,
+[10:41:00.654]        "lastTradeQty": 65,
+[10:41:00.654]        "exchFeedTime": "27-Mar-2026 10:41:00",
+[10:41:00.654]        "exchTradeTime": "27-Mar-2026 10:41:00",
+[10:41:00.654]        "netChange": -286.5,
+[10:41:00.655]        "percentChange": -1.23,
+[10:41:00.655]        "avgPrice": 23047.93,
+[10:41:00.655]        "tradeVolume": 2841865,
+[10:41:00.655]        "opnInterest": 13435305,
+[10:41:00.655]        "lowerCircuit": 20970.0,
+[10:41:00.655]        "upperCircuit": 25630.0,
+[10:41:00.655]        "totBuyQuan": 223665,
+[10:41:00.655]        "totSellQuan": 240175,
+[10:41:00.655]        "52WeekLow": 0.0,
+[10:41:00.655]        "52WeekHigh": 26825.0,
+[10:41:00.655]        "depth": {
+[10:41:00.656]            "buy": [
+[10:41:00.656]                {
+[10:41:00.656]                    "price": 23008.7,
+[10:41:00.656]                    "quantity": 65,
+[10:41:00.656]                    "orders": 1
+[10:41:00.656]                },
+[10:41:00.656]                {
+[10:41:00.656]                    "price": 23007.7,
+[10:41:00.656]                    "quantity": 65,
+[10:41:00.656]                    "orders": 1
+[10:41:00.656]                },
+[10:41:00.656]                {
+[10:41:00.656]                    "price": 23007.4,
+[10:41:00.656]                    "quantity": 520,
+[10:41:00.657]                    "orders": 1
+[10:41:00.657]                },
+[10:41:00.657]                {
+[10:41:00.657]                    "price": 23007.3,
+[10:41:00.657]                    "quantity": 585,
+[10:41:00.657]                    "orders": 2
+[10:41:00.657]                },
+[10:41:00.657]                {
+[10:41:00.658]                    "price": 23007.2,
+[10:41:00.658]                    "quantity": 130,
+[10:41:00.658]                    "orders": 2
+[10:41:00.658]                }
+[10:41:00.658]            ],
+[10:41:00.658]            "sell": [
+[10:41:00.658]                {
+[10:41:00.658]                    "price": 23013.6,
+[10:41:00.659]                    "quantity": 650,
+[10:41:00.659]                    "orders": 1
+[10:41:00.659]                },
+[10:41:00.659]                {
+[10:41:00.659]                    "price": 23013.8,
+[10:41:00.659]                    "quantity": 520,
+[10:41:00.659]                    "orders": 1
+[10:41:00.659]                },
+[10:41:00.659]                {
+[10:41:00.660]                    "price": 23013.9,
+[10:41:00.660]                    "quantity": 65,
+[10:41:00.660]                    "orders": 1
+[10:41:00.660]                },
+[10:41:00.660]                {
+[10:41:00.660]                    "price": 23014.3,
+[10:41:00.660]                    "quantity": 520,
+[10:41:00.660]                    "orders": 1
+[10:41:00.661]                },
+[10:41:00.661]                {
+[10:41:00.661]                    "price": 23014.4,
+[10:41:00.661]                    "quantity": 65,
+[10:41:00.661]                    "orders": 1
+[10:41:00.661]                }
+[10:41:00.661]            ]
+[10:41:00.661]        }
+[10:41:00.661]    }
+[10:41:00.661]  
+  >>> VOLUME (totTrdQnty) = 2841865  <-- HAS VOLUME
+[10:41:00.661]    >>> OI     (opnInterest)= 13435305   <-- HAS OI
+[10:41:00.661]  
+======================================================================
+  8. NIFTY FUTURES CANDLE DATA (with Volume)
+======================================================================
+[10:41:00.662]  
+--- getCandleData 1min — NIFTY30MAR26FUT ---
+[10:41:00.843]    status  = True
+[10:41:00.844]    Candles: 86
+[10:41:00.844]    Latest: ['2026-03-27T10:40:00+05:30', 23026.1, 23026.1, 23009.0, 23009.0, 115]
+[10:41:00.844]  
+  >>> Volume on futures candle = 115  <-- HAS VOLUME
+[10:41:00.845]    Non-zero volume candles: 86/86
+[10:41:00.845]  
+======================================================================
+  9. OPTION CHAIN — OI DATA (getMarketData on NFO options)
+======================================================================
+[10:41:00.845]  
+--- getMarketData FULL — NFO options (CE + PE) ---
+[10:41:01.013]    status     = True
+[10:41:01.013]    message    = SUCCESS
+[10:41:01.014]    fetched     = 2
+[10:41:01.014]    unfulfilled = 0: []
+[10:41:01.014]  
+  Symbol: NIFTY05MAY2622300PE
+[10:41:01.015]    Option data (all fields):
+[10:41:01.015]    {
+[10:41:01.015]        "exchange": "NFO",
+[10:41:01.016]        "tradingSymbol": "NIFTY05MAY2622300PE",
+[10:41:01.016]        "symbolToken": "73751",
+[10:41:01.016]        "ltp": 195.85,
+[10:41:01.016]        "open": 0.0,
+[10:41:01.016]        "high": 0.0,
+[10:41:01.016]        "low": 0.0,
+[10:41:01.016]        "close": 195.85,
+[10:41:01.016]        "lastTradeQty": 0,
+[10:41:01.017]        "exchFeedTime": "27-Mar-2026 10:40:30",
+[10:41:01.017]        "exchTradeTime": "01-Jan-1970 05:30:00",
+[10:41:01.017]        "netChange": 0.0,
+[10:41:01.017]        "percentChange": 0.0,
+[10:41:01.017]        "avgPrice": 0.0,
+[10:41:01.017]        "tradeVolume": 0,
+[10:41:01.017]        "opnInterest": 0,
+[10:41:01.017]        "lowerCircuit": 13.8,
+[10:41:01.017]        "upperCircuit": 288.0,
+[10:41:01.017]        "totBuyQuan": 3770,
+[10:41:01.017]        "totSellQuan": 0,
+[10:41:01.018]        "52WeekLow": 0.0,
+[10:41:01.018]        "52WeekHigh": 0.0,
+[10:41:01.018]        "depth": {
+[10:41:01.018]            "buy": [
+[10:41:01.018]                {
+[10:41:01.018]                    "price": 102.1,
+[10:41:01.018]                    "quantity": 130,
+[10:41:01.018]                    "orders": 2
+[10:41:01.018]                },
+[10:41:01.018]                {
+[10:41:01.018]                    "price": 102.05,
+[10:41:01.018]                    "quantity": 520,
+[10:41:01.018]                    "orders": 1
+[10:41:01.018]                },
+[10:41:01.018]                {
+[10:41:01.018]                    "price": 102.0,
+[10:41:01.018]                    "quantity": 1560,
+[10:41:01.018]                    "orders": 1
+[10:41:01.018]                },
+[10:41:01.018]                {
+[10:41:01.018]                    "price": 50.0,
+[10:41:01.018]                    "quantity": 1560,
+[10:41:01.019]                    "orders": 1
+[10:41:01.019]                },
+[10:41:01.019]                {
+[10:41:01.019]                    "price": 0.0,
+[10:41:01.019]                    "quantity": 0,
+[10:41:01.019]                    "orders": 0
+[10:41:01.019]                }
+[10:41:01.019]            ],
+[10:41:01.019]            "sell": [
+[10:41:01.019]                {
+[10:41:01.019]                    "price": 0.0,
+[10:41:01.019]                    "quantity": 0,
+[10:41:01.019]                    "orders": 0
+[10:41:01.019]                },
+[10:41:01.019]                {
+[10:41:01.020]                    "price": 0.0,
+[10:41:01.020]                    "quantity": 0,
+[10:41:01.020]                    "orders": 0
+[10:41:01.020]                },
+[10:41:01.020]                {
+[10:41:01.020]                    "price": 0.0,
+[10:41:01.020]                    "quantity": 0,
+[10:41:01.021]                    "orders": 0
+[10:41:01.021]                },
+[10:41:01.021]                {
+[10:41:01.021]                    "price": 0.0,
+[10:41:01.021]                    "quantity": 0,
+[10:41:01.022]                    "orders": 0
+[10:41:01.022]                },
+[10:41:01.022]                {
+[10:41:01.022]                    "price": 0.0,
+[10:41:01.022]                    "quantity": 0,
+[10:41:01.022]                    "orders": 0
+[10:41:01.022]                }
+[10:41:01.022]            ]
+[10:41:01.022]        }
+[10:41:01.022]    }
+[10:41:01.022]    [     OK     ]  ltp = 195.85
+[10:41:01.022]    [ ZERO/EMPTY ]  high = 0.0
+[10:41:01.023]    [ ZERO/EMPTY ]  low = 0.0
+[10:41:01.023]    [     OK     ]  close = 195.85
+[10:41:01.023]    [ ZERO/EMPTY ]  totTrdQnty = None
+[10:41:01.023]    [ ZERO/EMPTY ]  opnInterest = 0
+[10:41:01.023]    [ ZERO/EMPTY ]  opnInterestChng = None
+[10:41:01.023]    [ ZERO/EMPTY ]  netChng = None
+[10:41:01.023]  
+  >>> OI (opnInterest) = 0  <-- ZERO — PCR WILL BE 0
+[10:41:01.024]  
+  Symbol: NIFTY05MAY2621950CE
+[10:41:01.024]    Option data (all fields):
+[10:41:01.024]    {
+[10:41:01.024]        "exchange": "NFO",
+[10:41:01.024]        "tradingSymbol": "NIFTY05MAY2621950CE",
+[10:41:01.024]        "symbolToken": "73729",
+[10:41:01.025]        "ltp": 1260.05,
+[10:41:01.025]        "open": 0.0,
+[10:41:01.025]        "high": 0.0,
+[10:41:01.025]        "low": 0.0,
+[10:41:01.025]        "close": 0.0,
+[10:41:01.025]        "lastTradeQty": 0,
+[10:41:01.025]        "exchFeedTime": "27-Mar-2026 10:40:30",
+[10:41:01.025]        "exchTradeTime": "01-Jan-1970 05:30:00",
+[10:41:01.026]        "netChange": 0.0,
+[10:41:01.026]        "percentChange": 0.0,
+[10:41:01.026]        "avgPrice": 0.0,
+[10:41:01.026]        "tradeVolume": 0,
+[10:41:01.026]        "opnInterest": 0,
+[10:41:01.026]        "lowerCircuit": 779.3,
+[10:41:01.026]        "upperCircuit": 2128.5,
+[10:41:01.026]        "totBuyQuan": 0,
+[10:41:01.026]        "totSellQuan": 0,
+[10:41:01.026]        "52WeekLow": 0.0,
+[10:41:01.026]        "52WeekHigh": 0.0,
+[10:41:01.026]        "depth": {
+[10:41:01.026]            "buy": [
+[10:41:01.027]                {
+[10:41:01.027]                    "price": 0.0,
+[10:41:01.027]                    "quantity": 0,
+[10:41:01.027]                    "orders": 0
+[10:41:01.027]                },
+[10:41:01.027]                {
+[10:41:01.027]                    "price": 0.0,
+[10:41:01.027]                    "quantity": 0,
+[10:41:01.028]                    "orders": 0
+[10:41:01.028]                },
+[10:41:01.028]                {
+[10:41:01.028]                    "price": 0.0,
+[10:41:01.028]                    "quantity": 0,
+[10:41:01.028]                    "orders": 0
+[10:41:01.028]                },
+[10:41:01.028]                {
+[10:41:01.028]                    "price": 0.0,
+[10:41:01.028]                    "quantity": 0,
+[10:41:01.029]                    "orders": 0
+[10:41:01.029]                },
+[10:41:01.029]                {
+[10:41:01.029]                    "price": 0.0,
+[10:41:01.029]                    "quantity": 0,
+[10:41:01.029]                    "orders": 0
+[10:41:01.029]                }
+[10:41:01.029]            ],
+[10:41:01.029]            "sell": [
+[10:41:01.029]                {
+[10:41:01.030]                    "price": 0.0,
+[10:41:01.030]                    "quantity": 0,
+[10:41:01.030]                    "orders": 0
+[10:41:01.030]                },
+[10:41:01.030]                {
+[10:41:01.030]                    "price": 0.0,
+[10:41:01.030]                    "quantity": 0,
+[10:41:01.030]                    "orders": 0
+[10:41:01.030]                },
+[10:41:01.030]                {
+[10:41:01.030]                    "price": 0.0,
+[10:41:01.030]                    "quantity": 0,
+[10:41:01.030]                    "orders": 0
+[10:41:01.030]                },
+[10:41:01.030]                {
+[10:41:01.030]                    "price": 0.0,
+[10:41:01.031]                    "quantity": 0,
+[10:41:01.031]                    "orders": 0
+[10:41:01.031]                },
+[10:41:01.031]                {
+[10:41:01.031]                    "price": 0.0,
+[10:41:01.031]                    "quantity": 0,
+[10:41:01.031]                    "orders": 0
+[10:41:01.031]                }
+[10:41:01.031]            ]
+[10:41:01.031]        }
+[10:41:01.031]    }
+[10:41:01.031]    [     OK     ]  ltp = 1260.05
+[10:41:01.031]    [ ZERO/EMPTY ]  high = 0.0
+[10:41:01.032]    [ ZERO/EMPTY ]  low = 0.0
+[10:41:01.032]    [ ZERO/EMPTY ]  close = 0.0
+[10:41:01.032]    [ ZERO/EMPTY ]  totTrdQnty = None
+[10:41:01.032]    [ ZERO/EMPTY ]  opnInterest = 0
+[10:41:01.032]    [ ZERO/EMPTY ]  opnInterestChng = None
+[10:41:01.032]    [ ZERO/EMPTY ]  netChng = None
+[10:41:01.032]  
+  >>> OI (opnInterest) = 0  <-- ZERO — PCR WILL BE 0
+[10:41:01.032]  
+======================================================================
+  10. WEBSOCKET TICK TEST (30-second capture)
+======================================================================
+[10:41:01.032]  Subscribing to NIFTY ticks for 30 seconds...
+[10:41:01.032]  Will capture all fields from every tick received.
+
+[10:41:01.220]    WebSocket CONNECTED
+[10:41:01.220]    Waiting 30s for ticks...
+[10:41:01.220]    Subscribed to [['99926000'], ['51714', '73729', '73751'], ['73729', '73751']]
+[10:41:01.265]  
+                        TICK #1:
+                            token  = 99926000
+                            ltp    = 2300125
+                            volume = None
+                            oi     = None
+                            oic    = None
+                        
+[10:41:01.266]  
+                        TICK #2:
+                            token  = 73751
+                            ltp    = 19585
+                            volume = None
+                            oi     = None
+                            oic    = None
+                        
+[10:41:01.266]  
+                        TICK #3:
+                            token  = 73729
+                            ltp    = 126005
+                            volume = None
+                            oi     = None
+                            oic    = None
+                        
+[10:41:01.267]  
+                        TICK #4:
+                            token  = 51714
+                            ltp    = 2301350
+                            volume = None
+                            oi     = None
+                            oic    = None
+                        
+[10:41:01.267]  
+                        TICK #5:
+                            token  = 73751
+                            ltp    = 19585
+                            volume = None
+                            oi     = None
+                            oic    = None
+                        
+[10:41:36.271]  
+  Total ticks received: 151
+[10:41:36.271]    Unique fields seen across all ticks: ['52_week_high_price', '52_week_low_price', 'average_traded_price', 'best_5_buy_data', 'best_5_sell_data', 'closed_price', 'exchange_timestamp', 'exchange_type', 'high_price_of_the_day', 'last_traded_price', 'last_traded_quantity', 'last_traded_timestamp', 'low_price_of_the_day', 'lower_circuit_limit', 'open_interest', 'open_interest_change_percentage', 'open_price_of_the_day', 'sequence_number', 'subscription_mode', 'subscription_mode_val', 'token', 'total_buy_quantity', 'total_sell_quantity', 'upper_circuit_limit', 'volume_trade_for_the_day']
+[10:41:36.271]    Sample tick (latest):
+[10:41:36.272]    {
+[10:41:36.272]        "subscription_mode": 3,
+[10:41:36.272]        "exchange_type": 1,
+[10:41:36.272]        "token": "99926000",
+[10:41:36.273]        "sequence_number": 0,
+[10:41:36.273]        "exchange_timestamp": 1774588290000,
+[10:41:36.273]        "last_traded_price": 2299915,
+[10:41:36.273]        "subscription_mode_val": "SNAP_QUOTE",
+[10:41:36.273]        "last_traded_quantity": 0,
+[10:41:36.273]        "average_traded_price": 0,
+[10:41:36.273]        "volume_trade_for_the_day": 0,
+[10:41:36.273]        "total_buy_quantity": 0.0,
+[10:41:36.273]        "total_sell_quantity": 0.0,
+[10:41:36.274]        "open_price_of_the_day": 2317355,
+[10:41:36.274]        "high_price_of_the_day": 2318610,
+[10:41:36.274]        "low_price_of_the_day": 2296730,
+[10:41:36.274]        "closed_price": 2330645,
+[10:41:36.274]        "last_traded_timestamp": 0,
+[10:41:36.274]        "open_interest": 0,
+[10:41:36.274]        "open_interest_change_percentage": 0,
+[10:41:36.274]        "upper_circuit_limit": 0,
+[10:41:36.274]        "lower_circuit_limit": 0,
+[10:41:36.274]        "52_week_high_price": 0,
+[10:41:36.274]        "52_week_low_price": 0,
+[10:41:36.274]        "best_5_buy_data": [
+[10:41:36.274]            {
+[10:41:36.274]                "flag": 65535,
+[10:41:36.274]                "quantity": -1,
+[10:41:36.274]                "price": -1,
+[10:41:36.274]                "no of orders": 65535
+[10:41:36.274]            },
+[10:41:36.275]            {
+[10:41:36.275]                "flag": 65535,
+[10:41:36.275]                "quantity": -1,
+[10:41:36.275]                "price": -1,
+[10:41:36.275]                "no of orders": 65535
+[10:41:36.275]            },
+[10:41:36.275]            {
+[10:41:36.275]                "flag": 65535,
+[10:41:36.275]                "quantity": -1,
+[10:41:36.275]                "price": -1,
+[10:41:36.275]                "no of orders": 65535
+[10:41:36.275]            },
+[10:41:36.275]            {
+[10:41:36.275]                "flag": 65535,
+[10:41:36.275]                "quantity": -1,
+[10:41:36.275]                "price": -1,
+[10:41:36.275]                "no of orders": 65535
+[10:41:36.275]            },
+[10:41:36.275]            {
+[10:41:36.275]                "flag": 65535,
+[10:41:36.275]                "quantity": -1,
+[10:41:36.276]                "price": -1,
+[10:41:36.276]                "no of orders": 65535
+[10:41:36.276]            },
+[10:41:36.276]            {
+[10:41:36.276]                "flag": 65535,
+[10:41:36.276]                "quantity": -1,
+[10:41:36.276]                "price": -1,
+[10:41:36.276]                "no of orders": 65535
+[10:41:36.276]            },
+[10:41:36.276]            {
+[10:41:36.276]                "flag": 65535,
+[10:41:36.276]                "quantity": -1,
+[10:41:36.276]                "price": -1,
+[10:41:36.276]                "no of orders": 65535
+[10:41:36.276]            },
+[10:41:36.276]            {
+[10:41:36.277]                "flag": 65535,
+[10:41:36.277]                "quantity": -1,
+[10:41:36.277]                "price": -1,
+[10:41:36.277]                "no of orders": 65535
+[10:41:36.277]            },
+[10:41:36.277]            {
+[10:41:36.277]                "flag": 65535,
+[10:41:36.277]                "quantity": -1,
+[10:41:36.277]                "price": -1,
+[10:41:36.277]                "no of orders": 65535
+[10:41:36.277]            },
+[10:41:36.277]            {
+[10:41:36.277]                "flag": 65535,
+[10:41:36.277]                "quantity": -1,
+[10:41:36.278]                "price": -1,
+[10:41:36.278]                "no of orders": 65535
+[10:41:36.278]            }
+[10:41:36.278]        ],
+[10:41:36.278]        "best_5_sell_data": []
+[10:41:36.278]    }
+[10:41:36.278]  
+  Field Analysis:
+[10:41:36.278]      [ ABSENT  ]  'tk'  (Token) = None
+[10:41:36.278]      [ ABSENT  ]  'ltp'  (Last Traded Price) = None
+[10:41:36.279]      [ ABSENT  ]  'ltt'  (Last Trade Time) = None
+[10:41:36.279]      [ ABSENT  ]  'ltq'  (Last Trade Quantity) = None
+[10:41:36.279]      [ ABSENT  ]  'v'  (Total Traded Volume (session)) = None
+[10:41:36.279]      [ ABSENT  ]  'bp'  (Best Bid Price) = None
+[10:41:36.279]      [ ABSENT  ]  'bq'  (Best Bid Quantity) = None
+[10:41:36.279]      [ ABSENT  ]  'sp'  (Best Ask Price) = None
+[10:41:36.279]      [ ABSENT  ]  'sq'  (Best Ask Quantity) = None
+[10:41:36.279]      [ ABSENT  ]  'h'  (Session High) = None
+[10:41:36.279]      [ ABSENT  ]  'l'  (Session Low) = None
+[10:41:36.279]      [ ABSENT  ]  'o'  (Open Price) = None
+[10:41:36.279]      [ ABSENT  ]  'c'  (Close (prev day)) = None
+[10:41:36.279]      [ ABSENT  ]  'oi'  (Open Interest) = None
+[10:41:36.279]      [ ABSENT  ]  'oic'  (OI Change) = None
+[10:41:36.279]      [ ABSENT  ]  'toi'  (Total OI) = None
+[10:41:36.280]  
+======================================================================
+  11. SUMMARY — DATA AVAILABILITY FOR THIS APPLICATION
+======================================================================
+[10:41:36.280]  
+  INDICATOR / FEATURE          SOURCE                  STATUS
+  ─────────────────────────────────────────────────────────────────────
+  Nifty spot price (LTP)       NSE:NIFTY REST/WS       Check Section 3/10
+  Nifty spot change %          NSE:NIFTY REST/WS       Check Section 3/10
+  EMA 9, EMA 21                Computed from candles   Derived (no API needed)
+  ATR                          Computed from candles   Derived
+  Momentum                     Computed from candles   Derived
+  Session High/Low             Computed from candles   Derived
+  Support / Resistance         Computed from candles   Derived
+
+  VWAP (via cash index)        NSE:NIFTY candles       Check Section 5 volume
+  VWAP (via futures)           NFO:NIFTYFUT candles    Check Section 8 volume
+
+  PCR (Put-Call Ratio)         NFO options OI          Check Section 9
+  OI Buildup pattern           NFO options OI change   Check Section 9
+  Max Pain                     NFO options OI          Check Section 9
+  OI Support/Resistance        NFO options OI          Check Section 9
+
+  WebSocket volume (v field)   NSE/NFO WS feed         Check Section 10
+  WebSocket high/low (h, l)    NSE/NFO WS feed         Check Section 10
+  WebSocket OI (oi field)      NFO WS feed             Check Section 10
+  ─────────────────────────────────────────────────────────────────────
+  Read each section above for the actual values returned.

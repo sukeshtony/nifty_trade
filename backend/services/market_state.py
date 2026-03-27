@@ -106,15 +106,40 @@ class MarketStateManager:
                 inds["tr_history"] = trs[-14:]
                 self.state[symbol]["atr"] = round(sum(inds["tr_history"]) / len(inds["tr_history"]), 2)
 
-        # Session high/low from today's candles
-        if candles:
+        # Session high/low and prev_close from today's vs previous day candles
+        today_str = ist_now().strftime("%Y-%m-%d")
+        today_highs, today_lows, today_closes = [], [], []
+        prev_day_closes = []
+        for i, c in enumerate(candles):
+            ts = c[0] if isinstance(c, list) and len(c) > 0 else ""
+            if today_str in str(ts):
+                today_highs.append(highs[i])
+                today_lows.append(lows[i])
+                today_closes.append(closes[i])
+            else:
+                prev_day_closes.append(closes[i])
+
+        if today_highs:
+            self.state[symbol]["session_high"] = max(today_highs)
+            self.state[symbol]["session_low"] = min(today_lows)
+        else:
             self.state[symbol]["session_high"] = max(highs) if highs else 0
             self.state[symbol]["session_low"] = min(lows) if lows else float("inf")
 
-        # Initialize VWAP
+        # Compute change from previous day's last close
+        if prev_day_closes:
+            prev_close = prev_day_closes[-1]
+            self.state[symbol]["prev_close"] = prev_close
+            current = today_closes[-1] if today_closes else closes[-1]
+            if prev_close > 0:
+                self.state[symbol]["change"] = round(current - prev_close, 2)
+                self.state[symbol]["change_pct"] = round(((current - prev_close) / prev_close) * 100, 2)
+
+        # Initialize VWAP (today's candles only for accuracy)
+        vwap_candles = [c for c in candles if today_str in str(c[0])]
         tv = 0
         v = 0
-        for c in candles:
+        for c in vwap_candles:
             high = _get_val(c, 2)
             low = _get_val(c, 3)
             close = _get_val(c, 4)
@@ -158,6 +183,12 @@ class MarketStateManager:
         inds = self._indicators[symbol]
 
         st["current_price"] = price
+
+        # Update change from prev_close
+        prev_close = st.get("prev_close", 0)
+        if prev_close > 0:
+            st["change"] = round(price - prev_close, 2)
+            st["change_pct"] = round(((price - prev_close) / prev_close) * 100, 2)
 
         # Update EMAs
         inds["ema_9"].update(price)

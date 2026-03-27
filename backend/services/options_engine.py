@@ -65,6 +65,12 @@ class OptionsEngine:
         above = [r for r in chain if r["strike"] >= spot]
         below = [r for r in chain if r["strike"] <= spot]
 
+        # Fallback to full chain when spot has drifted outside the chain range
+        if not above:
+            above = chain
+        if not below:
+            below = chain
+
         resistance = max(above, key=lambda x: x.get("callOI", 0))["strike"] if above else None
         support = max(below, key=lambda x: x.get("putOI", 0))["strike"] if below else None
 

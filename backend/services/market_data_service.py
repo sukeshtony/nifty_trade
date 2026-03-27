@@ -1,6 +1,7 @@
 """Market Data Service — Angel One Smart API integration for real-time Nifty data."""
 
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from SmartApi import SmartConnect
@@ -17,6 +18,20 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+# Minimum delay between REST API calls to avoid Angel One rate-limiting (AB1019)
+_API_THROTTLE_SECONDS = 0.35
+_last_api_call_time = 0.0
+
+
+def _throttle():
+    """Enforce minimum delay between Angel One REST API calls."""
+    global _last_api_call_time
+    elapsed = time.time() - _last_api_call_time
+    if elapsed < _API_THROTTLE_SECONDS:
+        time.sleep(_API_THROTTLE_SECONDS - elapsed)
+    _last_api_call_time = time.time()
+
+
 class MarketDataService:
     """Handles all Angel One Smart API interactions for Nifty."""
 
@@ -28,6 +43,10 @@ class MarketDataService:
         self._connected = False
         self._login_lock = threading.Lock()
         self._ws_callbacks = []
+        self._nifty_fut_token: Optional[str] = None
+        self._nifty_fut_symbol: Optional[str] = None
+        self._instrument_master: Optional[List] = None
+        self._instrument_master_lock = threading.Lock()
 
     # ── Authentication ──
 
@@ -60,6 +79,53 @@ class MarketDataService:
         if not self._connected:
             self.login()
 
+    # ── Futures Token Resolution ──
+
+    def get_nifty_futures_token(self) -> Optional[Dict[str, str]]:
+        """Resolve nearest Nifty Futures contract from instrument master.
+        Returns {"token": "...", "symbol": "NIFTY30MAR26FUT"} or None.
+        Cached for the entire trading day.
+        """
+        if self._nifty_fut_token:
+            return {"token": self._nifty_fut_token, "symbol": self._nifty_fut_symbol}
+
+        master = self._load_instrument_master()
+        if not master:
+            return None
+
+        from datetime import datetime as dt
+        today = ist_now().date()
+
+        futures = [
+            d for d in master
+            if d.get("exch_seg") == "NFO"
+            and d.get("name") == "NIFTY"
+            and d.get("instrumenttype") == "FUTIDX"
+        ]
+
+        # Find nearest future expiry
+        nearest = None
+        for f in futures:
+            try:
+                exp = dt.strptime(f.get("expiry", ""), "%d%b%Y").date()
+                if exp >= today:
+                    if nearest is None or exp < dt.strptime(nearest.get("expiry", ""), "%d%b%Y").date():
+                        nearest = f
+            except ValueError:
+                continue
+
+        if nearest:
+            self._nifty_fut_token = nearest.get("token", "")
+            self._nifty_fut_symbol = nearest.get("symbol", "")
+            # Update the global SYMBOL_TOKENS so other parts of the code can use it
+            SYMBOL_TOKENS["NIFTY_FUT"]["token"] = self._nifty_fut_token
+            SYMBOL_TOKENS["NIFTY_FUT"]["symbol"] = self._nifty_fut_symbol
+            logger.info(f"Nifty Futures resolved: {self._nifty_fut_symbol} token={self._nifty_fut_token}")
+            return {"token": self._nifty_fut_token, "symbol": self._nifty_fut_symbol}
+
+        logger.warning("Could not resolve Nifty Futures token from instrument master")
+        return None
+
     # ── REST API Methods ──
 
     def get_ltp(self, symbol: str, exchange: str = "NSE", token: str = "") -> Optional[Dict]:
@@ -70,6 +136,7 @@ class MarketDataService:
             token = token or sym_info.get("token", "")
             exchange = sym_info.get("exchange", exchange)
 
+            _throttle()
             data = self.smart_api.ltpData(exchange, symbol, token)
             if data and data.get("status"):
                 ltp_data = data["data"]
@@ -88,6 +155,7 @@ class MarketDataService:
             token = sym_info.get("token", "")
             exchange = sym_info.get("exchange", "NSE")
 
+            _throttle()
             data = self.smart_api.getMarketData(
                 mode="FULL",
                 exchangeTokens={exchange: [token]}
@@ -149,6 +217,7 @@ class MarketDataService:
                 "fromdate": from_date,
                 "todate": to_date,
             }
+            _throttle()
             data = self.smart_api.getCandleData(params)
             if data and data.get("status"):
                 candles = data["data"]
@@ -164,23 +233,40 @@ class MarketDataService:
 
     def _load_instrument_master(self) -> List[Dict]:
         """Download and cache Angel One instrument master file (once per day)."""
+        # Fast path: instance-level cache (no lock needed for reads)
+        if self._instrument_master:
+            return self._instrument_master
+
+        # Check TTL-based cache
         cached = cache.get("instrument_master")
         if cached:
+            self._instrument_master = cached
             return cached
 
-        try:
-            import requests as req
-            url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
-            logger.info("Downloading Angel One instrument master...")
-            resp = req.get(url, timeout=30)
-            resp.raise_for_status()
-            master = resp.json()
-            cache.set("instrument_master", master, ttl=43200)  # 12 hours
-            logger.info(f"Instrument master loaded: {len(master)} instruments")
-            return master
-        except Exception as e:
-            logger.error(f"Failed to load instrument master: {e}")
-            return []
+        # Serialize downloads — only one thread downloads at a time
+        with self._instrument_master_lock:
+            # Double-check after acquiring lock (another thread may have finished)
+            if self._instrument_master:
+                return self._instrument_master
+            cached = cache.get("instrument_master")
+            if cached:
+                self._instrument_master = cached
+                return cached
+
+            try:
+                import requests as req
+                url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+                logger.info("Downloading Angel One instrument master...")
+                resp = req.get(url, timeout=30)
+                resp.raise_for_status()
+                master = resp.json()
+                cache.set("instrument_master", master, ttl=43200)  # 12 hours
+                self._instrument_master = master
+                logger.info(f"Instrument master loaded: {len(master)} instruments")
+                return master
+            except Exception as e:
+                logger.error(f"Failed to load instrument master: {e}")
+                return []
 
     def _get_option_contracts(self, symbol: str, expiry: str = "") -> Dict:
         """Filter instrument master for NFO option contracts."""
@@ -205,18 +291,35 @@ class MarketDataService:
         if expiry:
             selected_expiry = expiry
         else:
+            # Prefer the nearest WEEKLY expiry (within 7 days) for maximum OI/liquidity.
+            # Far-month options often have near-zero OI, breaking PCR/MaxPain/OI calculations.
+            today = ist_now().date()
+            weekly_cutoff = today + timedelta(days=7)
             selected_expiry = None
+            nearest_any = None  # fallback: nearest future expiry regardless of type
+
             for exp in expiry_dates:
                 try:
-                    exp_dt = dt.strptime(exp, "%d%b%Y")
-                    if exp_dt.date() >= ist_now().date():
-                        selected_expiry = exp
-                        break
+                    exp_dt = dt.strptime(exp, "%d%b%Y").date()
                 except ValueError:
                     continue
 
-        if not selected_expiry:
-            selected_expiry = expiry_dates[0] if expiry_dates else ""
+                if exp_dt < today:
+                    continue
+
+                # Track nearest future expiry as fallback
+                if nearest_any is None:
+                    nearest_any = exp
+
+                # Prefer expiry within 7 days (weekly)
+                if exp_dt <= weekly_cutoff:
+                    selected_expiry = exp
+                    break
+
+            if not selected_expiry:
+                selected_expiry = nearest_any or (expiry_dates[0] if expiry_dates else "")
+
+            logger.info(f"Option chain expiry selected: {selected_expiry} (weekly preference, {len(expiry_dates)} available)")
 
         expiry_options = [d for d in options if d.get("expiry") == selected_expiry]
 
@@ -285,8 +388,30 @@ class MarketDataService:
                     exchangeTokens={"NFO": all_tokens}
                 )
                 if md and md.get("status") and md.get("data"):
-                    for item in md["data"].get("fetched", []):
+                    fetched = md["data"].get("fetched", [])
+                    unfulfilled = md["data"].get("unfulfilled", [])
+                    if unfulfilled:
+                        logger.warning(
+                            f"NFO getMarketData: {len(fetched)} fetched, "
+                            f"{len(unfulfilled)} unfulfilled tokens — "
+                            f"likely subscription/entitlement issue. "
+                            f"Sample unfulfilled: {unfulfilled[:3]}"
+                        )
+                    elif not fetched:
+                        logger.warning(
+                            f"NFO getMarketData returned 0 items for {len(all_tokens)} tokens. "
+                            f"Full response: status={md.get('status')}, "
+                            f"message={md.get('message')}"
+                        )
+                    else:
+                        logger.info(f"NFO getMarketData: {len(fetched)} items fetched successfully")
+                    for item in fetched:
                         all_market_data[str(item.get("symbolToken", ""))] = item
+                else:
+                    logger.error(
+                        f"NFO getMarketData failed: status={md.get('status') if md else None}, "
+                        f"message={md.get('message') if md else 'no response'}"
+                    )
             except Exception as e:
                 logger.error(f"Option market data batch error: {e}")
 
@@ -328,8 +453,13 @@ class MarketDataService:
                 chain.append(row)
 
             if chain:
-                cache.set(cache_key, chain, ttl=30)
-                return chain
+                total_oi = sum(r.get("callOI", 0) + r.get("putOI", 0) for r in chain)
+                if total_oi > 0:
+                    cache.set(cache_key, chain, ttl=30)
+                    return chain
+                # OI is all-zero (NFO batch data failed) — preserve previous cached chain
+                prev = cache.get(cache_key)
+                return prev if prev else chain
 
             return cache.get(cache_key)
 
@@ -357,10 +487,19 @@ class MarketDataService:
         if not self._connected:
             self.login()
 
-        # Initialize state manager from history BEFORE accepting ticks
+        # Resolve Nifty Futures token (needed for volume/OI data)
+        fut_info = self.get_nifty_futures_token()
+        fut_token = fut_info["token"] if fut_info else None
+
+        # Initialize state manager from FUTURES candles (they have volume for VWAP)
         from services.market_state import market_state_manager
         logger.info("Initializing Market State Manager from historical candles...")
-        candles = self.get_candle_data("NIFTY", interval="ONE_MINUTE")
+        if fut_token:
+            candles = self.get_candle_data(
+                "NIFTY_FUT", token=fut_token, exchange="NFO", interval="ONE_MINUTE"
+            )
+        else:
+            candles = self.get_candle_data("NIFTY", interval="ONE_MINUTE")
         if candles:
             market_state_manager.initialize_from_history("NIFTY", candles)
         logger.info("Market State Manager initialized.")
@@ -373,9 +512,15 @@ class MarketDataService:
                 self.feed_token,
             )
 
-            token_list = [
-                {"exchangeType": 1, "tokens": [v["token"] for v in SYMBOL_TOKENS.values()]}
-            ]
+            # Build subscription list — NSE cash index + NFO futures/options
+            nse_tokens = [SYMBOL_TOKENS["NIFTY"]["token"]]
+            if SYMBOL_TOKENS.get("INDIAVIX", {}).get("token"):
+                nse_tokens.append(SYMBOL_TOKENS["INDIAVIX"]["token"])
+            nfo_tokens = [fut_token] if fut_token else []
+
+            token_list = [{"exchangeType": 1, "tokens": nse_tokens}]
+            if nfo_tokens:
+                token_list.append({"exchangeType": 2, "tokens": nfo_tokens})
 
             def on_data(wsapp, message):
                 try:
@@ -383,43 +528,62 @@ class MarketDataService:
                     ticks = data if isinstance(data, list) else [data]
 
                     for tick in ticks:
-                        token = tick.get("tk")
+                        # Smart API v2 WebSocket uses "token" (long name), fallback to "tk"
+                        token = tick.get("token") or tick.get("tk")
                         if not token:
                             continue
+                        token = str(token)
 
+                        # Resolve symbol from token
                         symbol = None
                         for sym_name, info in SYMBOL_TOKENS.items():
-                            if str(info.get("token")) == str(token):
+                            if str(info.get("token")) == token:
                                 symbol = sym_name
                                 break
-
                         if not symbol:
                             continue
 
-                        price = tick.get("ltp") or tick.get("last_traded_price", 0)
-                        if not price:
+                        # Smart API v2 WebSocket sends prices as integers (paisa).
+                        # e.g. last_traded_price=2300125 means ₹23,001.25
+                        # Divisor: 100 for prices.
+                        raw_ltp = tick.get("last_traded_price") or tick.get("ltp", 0)
+                        if not raw_ltp:
                             continue
 
-                        vol = tick.get("v") or tick.get("volume", 0)
-                        high = tick.get("h") or tick.get("high")
-                        low = tick.get("l") or tick.get("low")
+                        raw_vol = (
+                            tick.get("volume_trade_for_the_day")
+                            or tick.get("v")
+                            or 0
+                        )
+                        raw_high = (
+                            tick.get("high_price_of_the_day")
+                            or tick.get("h")
+                        )
+                        raw_low = (
+                            tick.get("low_price_of_the_day")
+                            or tick.get("l")
+                        )
 
                         try:
-                            price = float(price)
-                            vol = int(vol) if vol else 0
-                            if high: high = float(high)
-                            if low: low = float(low)
+                            price = float(raw_ltp) / 100.0
+                            vol = int(raw_vol) if raw_vol else 0
+                            high = float(raw_high) / 100.0 if raw_high else None
+                            low = float(raw_low) / 100.0 if raw_low else None
                         except (ValueError, TypeError):
-                            pass
+                            continue
+
+                        # For NIFTY_FUT ticks, update the NIFTY state (same underlying)
+                        state_symbol = "NIFTY" if symbol == "NIFTY_FUT" else symbol
 
                         from services.market_state import market_state_manager
-                        market_state_manager.update_tick(symbol, price, vol, high=high, low=low)
+                        market_state_manager.update_tick(
+                            state_symbol, price, vol, high=high, low=low
+                        )
 
                         cache.set(f"ws:{symbol}", tick, ttl=30)
 
                         if on_data_callback:
                             on_data_callback(tick)
-
                         for cb in self._ws_callbacks:
                             cb(tick)
 
