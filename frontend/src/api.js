@@ -87,6 +87,11 @@ export const closePaperTrade = async (tradeId, exitPrice) => {
   return data;
 };
 
+export const fetchPaperOptionChain = async () => {
+  const { data } = await api.get('/paper/option-chain');
+  return data;
+};
+
 export const fetchActivePaperTrades = async () => {
   const { data } = await api.get('/paper/trades/active');
   return data;
