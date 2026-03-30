@@ -843,9 +843,9 @@ class StrategyEngine:
         state:      Dict,
         indicators: Dict,
     ) -> Tuple[bool, str]:
-        price = state.get("current_price", 0)
+        price = state.get("current_price", 0) or indicators.get("current_price", 0)
         if not price or price <= 0:
-            return False, "No current price in market state"
+            return False, "No current price in market state or candle data"
 
         ema_9  = state.get("ema_9")  or (indicators.get("ema") or {}).get("ema_9")
         ema_21 = state.get("ema_21") or (indicators.get("ema") or {}).get("ema_21")
@@ -853,8 +853,9 @@ class StrategyEngine:
             return False, "EMA values not computed yet (insufficient candle history)"
 
         vwap = state.get("vwap") or indicators.get("vwap")
-        if not vwap:
-            return False, "VWAP unavailable (no volume data?)"
+        # For NIFTY Spot, VWAP/Volume is often unavailable. Do not hard-block if missing.
+        # if not vwap:
+        #     return False, "VWAP unavailable (no volume data?)"
 
         return True, "OK"
 

@@ -22,11 +22,13 @@ def get_nifty_price():
     # Try live state first (from WebSocket ticks)
     state = market_state_manager.get_state("NIFTY")
     if state and state.get("current_price"):
+        # Supplement change from REST cache when state hasn't computed it yet
+        full_cached = cache.get("market_full:NIFTY") or {}
         data = {
             "ltp": state["current_price"],
-            "change": state.get("change", 0),
-            "changePct": state.get("change_pct", 0),
-            "vwap": state.get("vwap", 0),
+            "change": state.get("change") or full_cached.get("change", 0),
+            "changePct": state.get("change_pct") or full_cached.get("changePct", 0),
+            "vwap": state.get("vwap") or None,
             "ema_9": state.get("ema_9"),
             "ema_21": state.get("ema_21"),
             "session_high": state.get("session_high", 0),

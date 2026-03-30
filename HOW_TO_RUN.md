@@ -18,7 +18,7 @@ The backend handles the trading logic, database, market data feeds (Angel One AP
 
 **Step 1: Open a terminal and navigate to the backend folder**
 ```bash
-cd c:\Users\tokes\Desktop\Nifty\Nifty_Trading\backend
+cd backend
 ```
 
 **Step 2: Activate the virtual environment**
@@ -55,7 +55,7 @@ The frontend provides the User Interface (Dashboards, Trades, Paper Trading, etc
 
 **Step 1: Open a NEW separate terminal and navigate to the frontend folder**
 ```bash
-cd c:\Users\tokes\Desktop\Nifty\Nifty_Trading\frontend
+cd frontend
 ```
 
 **Step 2: Install Node Modules (First time only)**

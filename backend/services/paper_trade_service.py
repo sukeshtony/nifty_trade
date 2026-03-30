@@ -122,6 +122,26 @@ class PaperTradeService:
         trades = db.query(PaperTrade).filter(PaperTrade.status == TradeStatus.OPEN).all()
         return [self._trade_to_dict(t) for t in trades]
 
+    def get_active_trades_with_pnl(self, db: Session, chain_ltp_map: Dict) -> List[Dict]:
+        """Get open paper trades enriched with live LTP and unrealized P&L."""
+        trades = db.query(PaperTrade).filter(PaperTrade.status == TradeStatus.OPEN).all()
+        result = []
+        for t in trades:
+            d = self._trade_to_dict(t)
+            current_ltp = chain_ltp_map.get((t.strike, t.option_type), 0)
+            d["current_ltp"] = current_ltp if current_ltp else None
+            if current_ltp and t.entry_price:
+                unrealized_pnl = round((current_ltp - t.entry_price) * t.qty, 2)
+                d["unrealized_pnl"] = unrealized_pnl
+                d["unrealized_pnl_pct"] = round(
+                    (current_ltp - t.entry_price) / t.entry_price * 100, 2
+                )
+            else:
+                d["unrealized_pnl"] = 0
+                d["unrealized_pnl_pct"] = 0
+            result.append(d)
+        return result
+
     def get_paper_trade_history(self, db: Session, limit: int = 50) -> List[Dict]:
         """Get closed paper trades."""
         trades = (

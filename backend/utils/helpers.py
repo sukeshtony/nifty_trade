@@ -47,7 +47,10 @@ LOT_SIZES = {
 # Angel One symbol tokens for Nifty
 SYMBOL_TOKENS = {
     "NIFTY": {"symbol": "NIFTY", "token": "99926000", "exchange": "NSE"},
-    "INDIAVIX": {"symbol": "India VIX", "token": "99926004", "exchange": "NSE"},
+    "INDIAVIX": {"symbol": "India VIX", "token": "99926009", "exchange": "NSE"},
+    # NIFTY_FUT token is resolved dynamically at runtime from instrument master.
+    # See MarketDataService.get_nifty_futures_token()
+    "NIFTY_FUT": {"symbol": "", "token": "", "exchange": "NFO"},
 }
 
 # Estimated brokerage charges per trade (one side)

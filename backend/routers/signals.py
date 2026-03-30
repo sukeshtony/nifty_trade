@@ -35,10 +35,20 @@ def get_current_signal(db: Session = Depends(get_db)):
     
     source = "LIVE" if state and state.get("current_price") else "CACHE"
 
-    # ── 2. Candle indicators ──────────────────────────────────────────────────
-    candles = cache.get("candles:NIFTY:ONE_MINUTE")
+    # ── 2. Candle indicators (prefer futures candles — they have volume for VWAP) ──
+    candles = cache.get("candles:NIFTY_FUT:ONE_MINUTE")
     if not candles:
-        candles = market_service.get_candle_data("NIFTY", interval="ONE_MINUTE")
+        # Try futures candles first (have volume for VWAP/volume spike)
+        fut_info = market_service.get_nifty_futures_token()
+        if fut_info:
+            candles = market_service.get_candle_data(
+                "NIFTY_FUT", token=fut_info["token"], exchange="NFO", interval="ONE_MINUTE"
+            )
+        # Fallback to cash index candles if futures unavailable
+        if not candles:
+            candles = cache.get("candles:NIFTY:ONE_MINUTE")
+        if not candles:
+            candles = market_service.get_candle_data("NIFTY", interval="ONE_MINUTE")
     indicators = compute_all_indicators(candles) if candles else {}
 
     # ── 3. Options analysis ───────────────────────────────────────────────────
@@ -98,6 +108,75 @@ def get_current_signal(db: Session = Depends(get_db)):
     # ── 8. Store signal in DB (throttled) ─────────────────────────────────────
     _maybe_store_signal(db, signal_result)
 
+    # ── Enhance explanation with frontend UI statuses ─────────────────────────
+    explanation_dict = signal_result.get("explanation", {})
+
+    _ema = indicators.get("ema", {}) or {}
+    ema_9 = state.get("ema_9") or _ema.get("ema_9", 0)
+    ema_21 = state.get("ema_21") or _ema.get("ema_21", 0)
+    price = state.get("current_price") or indicators.get("current_price", 0)
+
+    if ema_9 and ema_21:
+        if price > ema_9 > ema_21:
+            ema_status = f"Strong Bullish (Price > {ema_9} > {ema_21})"
+        elif ema_9 > ema_21 and price > ema_21:
+            ema_status = "Mild Bullish"
+        elif price < ema_9 < ema_21:
+            ema_status = f"Strong Bearish (Price < {ema_9} < {ema_21})"
+        elif ema_9 < ema_21 and price < ema_21:
+            ema_status = "Mild Bearish"
+        else:
+            ema_status = "Neutral / Sideways"
+    else:
+        ema_status = "N/A"
+
+    vwap = state.get("vwap") or indicators.get("vwap", 0)
+    if vwap and vwap > 0:
+        if price > vwap:
+            vwap_status = f"Bullish (Above {vwap})"
+        else:
+            vwap_status = f"Bearish (Below {vwap})"
+    else:
+        vwap_status = "N/A (No Volume)"
+
+    pcr = options_data.get("pcr", 0)
+    if pcr > 1.1: pcr_status = f"Bullish ({pcr})"
+    elif pcr > 0: pcr_status = f"Bearish/Neutral ({pcr})"
+    else: pcr_status = "N/A"
+
+    oi_status = options_data.get("dominant_buildup", "N/A").replace("_", " ").title()
+
+    momentum = state.get("momentum") or indicators.get("momentum") or 0
+    if momentum > 0: momentum_status = f"Bullish (+{momentum})"
+    elif momentum < 0: momentum_status = f"Bearish ({momentum})"
+    else: momentum_status = "Neutral (0)"
+
+    sup = indicators.get("support_resistance", {}).get("support")
+    res = indicators.get("support_resistance", {}).get("resistance")
+    if sup and res:
+        sr_status = f"{sup} / {res}"
+    else:
+        sr_status = "N/A"
+
+    vol_spike = indicators.get("volume", {}).get("spike")
+    vol_rel = indicators.get("volume", {}).get("relative_volume")
+    if vol_spike:
+        volume_status = f"Spike ({vol_rel}x)"
+    else:
+        volume_status = f"Normal" if vol_rel else "N/A"
+
+    explanation_dict.update({
+        "ema_status": ema_status,
+        "vwap_status": vwap_status,
+        "pcr_status": pcr_status,
+        "oi_status": oi_status,
+        "momentum_status": momentum_status,
+        "support_resistance": sr_status,
+        "volume_status": volume_status
+    })
+
+    signal_result["explanation"] = explanation_dict
+
     # ── Build response ────────────────────────────────────────────────────────
     response_data = {
         # Core signal
@@ -130,14 +209,14 @@ def get_current_signal(db: Session = Depends(get_db)):
         "regime_info":     regime_info,
         "candle_info":     candle_info,
 
-        # Market snapshot
+        # Market snapshot — state from WebSocket, indicators from candles as fallback
         "market_state": {
-            "price":    state.get("current_price", 0),
-            "vwap":     state.get("vwap", 0),
-            "ema_9":    state.get("ema_9"),
-            "ema_21":   state.get("ema_21"),
-            "atr":      state.get("atr"),
-            "momentum": state.get("momentum", 0),
+            "price":    state.get("current_price") or indicators.get("current_price", 0),
+            "vwap":     state.get("vwap") or None,
+            "ema_9":    state.get("ema_9") or _ema.get("ema_9"),
+            "ema_21":   state.get("ema_21") or _ema.get("ema_21"),
+            "atr":      state.get("atr") or indicators.get("atr"),
+            "momentum": state.get("momentum") or indicators.get("momentum") or 0,
         },
         "options_summary": {
             "pcr":          options_data.get("pcr", 0),
