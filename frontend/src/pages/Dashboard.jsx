@@ -34,6 +34,8 @@ export default function Dashboard() {
         vwap:     priceData.vwap,
         ema_9:    priceData.ema_9,
         ema_21:   priceData.ema_21,
+        candle_ema_9: signalData?.market_state?.candle_ema_9,
+        candle_ema_21: signalData?.market_state?.candle_ema_21,
         atr:      priceData.atr,
         momentum: priceData.momentum,
       }

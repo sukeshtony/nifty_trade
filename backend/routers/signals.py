@@ -130,6 +130,22 @@ def get_current_signal(db: Session = Depends(get_db)):
     else:
         ema_status = "N/A"
 
+    candle_ema_9 = _ema.get("ema_9", 0)
+    candle_ema_21 = _ema.get("ema_21", 0)
+    if candle_ema_9 and candle_ema_21:
+        if price > candle_ema_9 > candle_ema_21:
+            candle_ema_status = f"Strong Bullish (Price > {candle_ema_9} > {candle_ema_21})"
+        elif candle_ema_9 > candle_ema_21 and price > candle_ema_21:
+            candle_ema_status = "Mild Bullish"
+        elif price < candle_ema_9 < candle_ema_21:
+            candle_ema_status = f"Strong Bearish (Price < {candle_ema_9} < {candle_ema_21})"
+        elif candle_ema_9 < candle_ema_21 and price < candle_ema_21:
+            candle_ema_status = "Mild Bearish"
+        else:
+            candle_ema_status = "Neutral / Sideways"
+    else:
+        candle_ema_status = "N/A"
+
     vwap = state.get("vwap") or indicators.get("vwap", 0)
     if vwap and vwap > 0:
         if price > vwap:
@@ -167,6 +183,7 @@ def get_current_signal(db: Session = Depends(get_db)):
 
     explanation_dict.update({
         "ema_status": ema_status,
+        "candle_ema_status": candle_ema_status,
         "vwap_status": vwap_status,
         "pcr_status": pcr_status,
         "oi_status": oi_status,
@@ -215,6 +232,8 @@ def get_current_signal(db: Session = Depends(get_db)):
             "vwap":     state.get("vwap") or None,
             "ema_9":    state.get("ema_9") or _ema.get("ema_9"),
             "ema_21":   state.get("ema_21") or _ema.get("ema_21"),
+            "candle_ema_9":  _ema.get("ema_9"),
+            "candle_ema_21": _ema.get("ema_21"),
             "atr":      state.get("atr") or indicators.get("atr"),
             "momentum": state.get("momentum") or indicators.get("momentum") or 0,
         },

@@ -16,10 +16,17 @@ The dashboard gets its data from a combination of **live WebSocket ticks** (for 
 ## Indicators Breakdown
 
 ### 1. EMA Status (EMA 9 & EMA 21)
-- **Calculation:** Exponential Moving Average (EMA) of the prices. The system uses a highly optimized `IncrementalEMA` algorithm. It seeds the EMAs using the 1-minute candle closes and then mathematically updates them in `O(1)` time on every incoming live tick.
-- **Data Used:** 1-min historical candles (seed) + Live tick prices (updates).
-- **Update Frequency:** **Instant** (updates on every WebSocket tick).
+- **Calculation:** 
+  - **EMA (Tick):** Exponential Moving Average (EMA) of the prices. The system uses a highly optimized `IncrementalEMA` algorithm. It seeds the EMAs using the 1-minute candle closes and then mathematically updates them in `O(1)` time on every incoming live tick.
+  - **EMA (1m):** Standard EMA calculated purely off the closing prices of the historical 1-minute candles using pandas.
+- **Data Used:** 
+  - **EMA (Tick):** 1-min historical candles (seed) + Live tick prices (updates).
+  - **EMA (1m):** 1-min historical candles.
+- **Update Frequency:** 
+  - **EMA (Tick):** **Instant** (updates on every WebSocket tick).
+  - **EMA (1m):** **Slower** (updates roughly every 15 seconds when REST API fetches new candles).
 - **Displayed Results:**
+  - Both indicators display numeric values in the "Key Indicators" grid, and their interpreted trends are shown simultaneously in the "Signal Explanation" panel:
   - `Strong Bullish`: Current Price > EMA 9 > EMA 21
   - `Mild Bullish`: EMA 9 > EMA 21 AND Current Price > EMA 21
   - `Strong Bearish`: Current Price < EMA 9 < EMA 21
