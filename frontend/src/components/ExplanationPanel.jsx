@@ -5,7 +5,8 @@ const ExplanationPanel = memo(({ explanation, conditions }) => {
   if (!explanation) return null;
 
   const items = [
-    { label: 'EMA Status', value: explanation.ema_status },
+    { label: 'EMA (Tick)', value: explanation.ema_status },
+    { label: 'EMA (1m)', value: explanation.candle_ema_status },
     { label: 'VWAP Status', value: explanation.vwap_status },
     { label: 'PCR', value: explanation.pcr_status },
     { label: 'OI Buildup', value: explanation.oi_status },

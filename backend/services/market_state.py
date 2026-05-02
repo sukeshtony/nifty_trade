@@ -4,6 +4,7 @@ Uses EMA(9, 21) per spec. Tracks VWAP, momentum, session support/resistance.
 """
 
 import logging
+import threading
 from typing import Dict, Any, Optional
 from utils.helpers import ist_now
 
@@ -43,6 +44,7 @@ class MarketStateManager:
         self.state = {}
         self._indicators = {}
         self._callbacks = []
+        self._lock = threading.RLock()
 
     def register_callback(self, callback):
         self._callbacks.append(callback)
@@ -178,70 +180,78 @@ class MarketStateManager:
 
     def update_tick(self, symbol: str, price: float, volume: int = 0,
                     is_new_candle: bool = False, high: float = None, low: float = None):
-        """Update indicators with O(1) complexity on a new tick."""
-        self._init_symbol_state(symbol)
-        st = self.state[symbol]
-        inds = self._indicators[symbol]
+        """Update indicators with O(1) complexity on a new tick. Thread-safe."""
+        with self._lock:
+            self._init_symbol_state(symbol)
+            st = self.state[symbol]
+            inds = self._indicators[symbol]
 
-        st["current_price"] = price
+            st["current_price"] = price
 
-        # Update change from prev_close
-        prev_close = st.get("prev_close", 0)
-        if prev_close > 0:
-            st["change"] = round(price - prev_close, 2)
-            st["change_pct"] = round(((price - prev_close) / prev_close) * 100, 2)
+            # Update change from prev_close
+            prev_close = st.get("prev_close", 0)
+            if prev_close > 0:
+                st["change"] = round(price - prev_close, 2)
+                st["change_pct"] = round(((price - prev_close) / prev_close) * 100, 2)
 
-        # Update EMAs
-        inds["ema_9"].update(price)
-        inds["ema_21"].update(price)
+            # Update EMAs
+            inds["ema_9"].update(price)
+            inds["ema_21"].update(price)
 
-        # Update VWAP
-        if volume > 0 and high is not None and low is not None:
-            tp = (high + low + price) / 3
-            st["typical_price_volume"] += (tp * volume)
-            st["volume_today"] += volume
-            if st["volume_today"] > 0:
-                st["vwap"] = round(st["typical_price_volume"] / st["volume_today"], 2)
+            # Update VWAP
+            if volume > 0 and high is not None and low is not None:
+                tp = (high + low + price) / 3
+                st["typical_price_volume"] += (tp * volume)
+                st["volume_today"] += volume
+                if st["volume_today"] > 0:
+                    st["vwap"] = round(st["typical_price_volume"] / st["volume_today"], 2)
 
-        # Update session high/low
-        if high and high > st["session_high"]:
-            st["session_high"] = high
-        if low and low > 0 and (st["session_low"] == 0 or low < st["session_low"]):
-            st["session_low"] = low
+            # Update session high/low
+            if high and high > st["session_high"]:
+                st["session_high"] = high
+            if low and low > 0 and (st["session_low"] == 0 or low < st["session_low"]):
+                st["session_low"] = low
 
-        # Update momentum (close-to-close)
-        inds["close_history"].append(price)
-        if len(inds["close_history"]) > 20:
-            inds["close_history"] = inds["close_history"][-20:]
-        if len(inds["close_history"]) >= 5:
-            st["momentum"] = round(price - inds["close_history"][-5], 2)
+            # Update momentum (close-to-close)
+            inds["close_history"].append(price)
+            if len(inds["close_history"]) > 20:
+                inds["close_history"] = inds["close_history"][-20:]
+            if len(inds["close_history"]) >= 5:
+                st["momentum"] = round(price - inds["close_history"][-5], 2)
 
-        # Update ATR (simplified — using last TR values)
-        if high is not None and low is not None and len(inds["close_history"]) >= 2:
-            prev_close = inds["close_history"][-2]
-            tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
-            inds["tr_history"].append(tr)
-            if len(inds["tr_history"]) > 14:
-                inds["tr_history"] = inds["tr_history"][-14:]
-            st["atr"] = round(sum(inds["tr_history"]) / len(inds["tr_history"]), 2)
+            # Update ATR (simplified — using last TR values)
+            if high is not None and low is not None and len(inds["close_history"]) >= 2:
+                prev_close_for_atr = inds["close_history"][-2]
+                tr = max(high - low, abs(high - prev_close_for_atr), abs(low - prev_close_for_atr))
+                inds["tr_history"].append(tr)
+                if len(inds["tr_history"]) > 14:
+                    inds["tr_history"] = inds["tr_history"][-14:]
+                st["atr"] = round(sum(inds["tr_history"]) / len(inds["tr_history"]), 2)
 
-        # Sync state
-        self._sync_state_from_indicators(symbol)
+            # Sync state
+            self._sync_state_from_indicators(symbol)
 
-        # Broadcast
-        for cb in self._callbacks:
-            cb(symbol, self.state[symbol])
+            # Snapshot for callbacks (copy taken inside lock, callbacks called outside)
+            state_snapshot = dict(st)
+            callbacks = list(self._callbacks)
+
+        # Fire callbacks outside the lock — avoids deadlock if callback reads state
+        for cb in callbacks:
+            try:
+                cb(symbol, state_snapshot)
+            except Exception as e:
+                logger.error(f"Tick callback error: {e}")
 
     def get_state(self, symbol: str) -> Dict[str, Any]:
-        """Get the current O(1) state without any recalculations."""
-        raw = self.state.get(symbol, {})
-        # Sanitize inf/nan — Python JSON encoder rejects them
+        """Get the current O(1) state without any recalculations. Thread-safe copy."""
         import math
         def _safe(v):
             if isinstance(v, float) and (math.isinf(v) or math.isnan(v)):
                 return 0
             return v
-        return {k: _safe(v) for k, v in raw.items()}
+        with self._lock:
+            raw = self.state.get(symbol, {})
+            return {k: _safe(v) for k, v in raw.items()}
 
     def _check_ema_alignment(self, state: dict, price: float) -> str:
         """Check EMA trend alignment using EMA 9 and 21."""

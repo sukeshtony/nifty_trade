@@ -6,8 +6,8 @@ import {
   fetchPaperTradeHistory,
   placePaperTrade,
   closePaperTrade,
-  fetchPaperOptionChain,
 } from '../api';
+import { useMarketStream } from '../hooks/useMarketStream';
 import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 
 const fmtPrice = (n) =>
@@ -32,28 +32,26 @@ const PnlCell = ({ value, suffix = '' }) => {
 
 export default function PaperTrading() {
   const [account, setAccount] = useState(null);
-  const [optionChain, setOptionChain] = useState([]);
-  const [spotPrice, setSpotPrice] = useState(0);
   const [activeTrades, setActiveTrades] = useState([]);
   const [history, setHistory] = useState([]);
   const [initAmount, setInitAmount] = useState(100000);
   const [loading, setLoading] = useState(true);
   const [placingTrade, setPlacingTrade] = useState(null);
 
+  // ── Live option chain from WebSocket ─────────────────────────────────────
+  const { priceData, optionChain: streamChain, connected } = useMarketStream();
+  const optionChain = streamChain?.data || [];
+  const spotPrice   = streamChain?.spot_price || priceData?.ltp || 0;
+
   const loadAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [acc, chain, active, hist] = await Promise.all([
+      const [acc, active, hist] = await Promise.all([
         fetchPaperAccount(),
-        fetchPaperOptionChain(),
         fetchActivePaperTrades(),
         fetchPaperTradeHistory(),
       ]);
       if (acc?.data) setAccount(acc.data);
-      if (chain?.data) {
-        setOptionChain(chain.data);
-        setSpotPrice(chain.spot_price || 0);
-      }
       setActiveTrades(active?.data || []);
       setHistory(hist?.data || []);
     } catch (e) {
@@ -63,25 +61,23 @@ export default function PaperTrading() {
     }
   }, []);
 
-  const refreshLive = useCallback(async () => {
+  const refreshTrades = useCallback(async () => {
     try {
-      const [chain, active] = await Promise.all([
-        fetchPaperOptionChain(),
+      // Option chain comes from WebSocket — only refresh DB-backed trade data
+      const [active, acc] = await Promise.all([
         fetchActivePaperTrades(),
+        fetchPaperAccount(),
       ]);
-      if (chain?.data) {
-        setOptionChain(chain.data);
-        setSpotPrice(chain.spot_price || 0);
-      }
       setActiveTrades(active?.data || []);
-    } catch (e) {}
+      if (acc?.data) setAccount(acc.data);
+    } catch (_) {}
   }, []);
 
   useEffect(() => {
     loadAll();
-    const interval = setInterval(refreshLive, 5000);
+    const interval = setInterval(refreshTrades, 5000);
     return () => clearInterval(interval);
-  }, [loadAll, refreshLive]);
+  }, [loadAll, refreshTrades]);
 
   const handleInit = async () => {
     if (!window.confirm(`Reset paper account to ₹${Number(initAmount).toLocaleString('en-IN')}? All open trades will be closed.`)) return;
@@ -105,7 +101,7 @@ export default function PaperTrading() {
         qty: 25,
         trade_type: 'INTRADAY',
       });
-      await loadAll();
+      await refreshTrades();
     } catch (e) {
       console.error('Trade failed', e);
       alert('Failed to place trade. Please try again.');
@@ -125,7 +121,7 @@ export default function PaperTrading() {
     if (!window.confirm(`Exit NIFTY ${trade.strike} ${trade.option_type} at ₹${exitPrice}?`)) return;
     try {
       await closePaperTrade(trade.id, exitPrice);
-      await loadAll();
+      await refreshTrades();
     } catch (e) {
       console.error(e);
     }
@@ -152,7 +148,15 @@ export default function PaperTrading() {
             Buy / Exit Nifty options using live option chain data — no real money at risk
           </p>
         </div>
-        <div className="panel" style={{ padding: '8px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="panel" style={{ padding: '8px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-muted)' }}>
+            <span style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              background: connected ? 'var(--success)' : 'var(--danger)',
+              display: 'inline-block',
+            }} />
+            {connected ? 'Live' : 'Reconnecting...'}
+          </div>
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>NIFTY 50</span>
           <span style={{ fontSize: '20px', fontWeight: '700' }}>
             {spotPrice ? `₹${spotPrice.toLocaleString('en-IN')}` : '—'}

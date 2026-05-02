@@ -42,6 +42,8 @@ class MarketDataService:
         self.feed_token: str = ""
         self._connected = False
         self._login_lock = threading.Lock()
+        self._last_login_attempt: float = 0   # epoch timestamp of last attempt
+        self._login_cooldown_s: int = 60       # wait 60 s before retrying a failed login
         self._ws_callbacks = []
         self._nifty_fut_token: Optional[str] = None
         self._nifty_fut_symbol: Optional[str] = None
@@ -57,6 +59,12 @@ class MarketDataService:
         with self._login_lock:
             if self._connected:
                 return True
+            # Cooldown: don't hammer Angel One if login recently failed
+            if self._last_login_attempt > 0:
+                elapsed = time.time() - self._last_login_attempt
+                if elapsed < self._login_cooldown_s:
+                    return False  # silently skip — cooldown active
+            self._last_login_attempt = time.time()
             try:
                 self.smart_api = SmartConnect(api_key=settings.ANGEL_API_KEY)
                 totp = pyotp.TOTP(settings.ANGEL_TOTP_SECRET).now()
@@ -69,6 +77,7 @@ class MarketDataService:
                     self.auth_token = data["data"]["jwtToken"]
                     self.feed_token = self.smart_api.getfeedToken()
                     self._connected = True
+                    self._last_login_attempt = 0  # reset on success
                     logger.info("Angel One login successful")
                     return True
                 logger.error(f"Angel One login failed: {data}")

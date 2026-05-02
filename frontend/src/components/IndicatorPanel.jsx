@@ -3,8 +3,10 @@ import { Activity } from 'lucide-react';
 
 const IndicatorPanel = memo(({ marketState, optionsSummary }) => {
   const indicators = [
-    { label: 'EMA 9', value: marketState?.ema_9, format: 'price' },
-    { label: 'EMA 21', value: marketState?.ema_21, format: 'price' },
+    { label: 'EMA 9 (Tick)', value: marketState?.ema_9, format: 'price' },
+    { label: 'EMA 21 (Tick)', value: marketState?.ema_21, format: 'price' },
+    { label: 'EMA 9 (1m)', value: marketState?.candle_ema_9, format: 'price' },
+    { label: 'EMA 21 (1m)', value: marketState?.candle_ema_21, format: 'price' },
     { label: 'VWAP', value: marketState?.vwap, format: 'price' },
     { label: 'Momentum', value: marketState?.momentum, format: 'change' },
     { label: 'PCR', value: optionsSummary?.pcr, format: 'ratio' },
