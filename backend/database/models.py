@@ -103,3 +103,54 @@ class PaperTrade(Base):
     trade_type = Column(Enum(TradeType), default=TradeType.INTRADAY)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+# ── Angel One Synced Trades ──
+
+class AngelTrade(Base):
+    """Stores real executed trades fetched from Angel One's trade book API.
+
+    Each row represents one closed round-trip (BUY + SELL pair) for a
+    Nifty options position.  The pair is uniquely identified by the
+    combination of buy_trade_id and sell_trade_id from Angel One.
+    """
+    __tablename__ = "angel_trades"
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Angel One identifiers (for deduplication)
+    buy_trade_id   = Column(String(50), nullable=False, index=True)
+    sell_trade_id  = Column(String(50), nullable=False, index=True)
+    buy_order_id   = Column(String(50), nullable=True)
+    sell_order_id  = Column(String(50), nullable=True)
+
+    # Instrument details
+    symbol         = Column(String(50), nullable=False, default="NIFTY")
+    strike         = Column(Integer, nullable=False)
+    option_type    = Column(String(5), nullable=False)   # CE or PE
+    trade_type     = Column(String(20), default="INTRADAY")  # INTRADAY / POSITIONAL
+
+    # Prices & quantity
+    entry_price    = Column(Float, nullable=False)
+    exit_price     = Column(Float, nullable=False)
+    qty            = Column(Integer, nullable=False, default=25)
+
+    # P&L
+    gross_pnl      = Column(Float, default=0.0)   # before charges
+    net_pnl        = Column(Float, default=0.0)   # after all charges
+
+    # Charge breakdown (BUY leg + SELL leg combined)
+    brokerage      = Column(Float, default=0.0)   # ₹20 × 2 = ₹40 typically
+    stt            = Column(Float, default=0.0)   # Securities Transaction Tax
+    exchange_charge= Column(Float, default=0.0)   # NSE exchange transaction charge
+    gst            = Column(Float, default=0.0)   # 18% on brokerage + exchange
+    sebi_fee       = Column(Float, default=0.0)   # SEBI regulatory fee
+    stamp_duty     = Column(Float, default=0.0)   # State stamp duty (buy side)
+    total_charges  = Column(Float, default=0.0)   # Sum of all above
+
+    # Timestamps
+    entry_time     = Column(DateTime, nullable=True)
+    exit_time      = Column(DateTime, nullable=True)
+    synced_at      = Column(DateTime, nullable=True)   # when this record was fetched
+    created_at     = Column(DateTime, server_default=func.now())
+

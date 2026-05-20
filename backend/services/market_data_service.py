@@ -45,12 +45,15 @@ class MarketDataService:
         self._last_login_attempt: float = 0   # epoch timestamp of last attempt
         self._login_cooldown_s: int = 60       # wait 60 s before retrying a failed login
         self._ws_callbacks = []
+        self._depth_callbacks = []           # depth-specific callbacks
         self._nifty_fut_token: Optional[str] = None
         self._nifty_fut_symbol: Optional[str] = None
         self._instrument_master: Optional[List] = None
         self._instrument_master_lock = threading.Lock()
         self._oi_baselines = {}  # {token: initial_oi_of_day}
         self._baseline_date = None
+        # Maps token → display label for depth subscription
+        self._depth_token_labels: Dict[str, str] = {}
 
     # ── Authentication ──
 
@@ -514,8 +517,50 @@ class MarketDataService:
 
     # ── WebSocket ──
 
+    def _resolve_atm_option_tokens(self) -> Dict[str, str]:
+        """Return {token: label} for ATM CE + PE of the nearest weekly expiry.
+        Used to subscribe these tokens on the depth (mode=3) feed.
+        """
+        try:
+            ltp_data = self.get_ltp("NIFTY")
+            spot = ltp_data.get("ltp", 0) if ltp_data else 0
+            if not spot:
+                return {}
+
+            contracts = self._get_option_contracts("NIFTY")
+            ce_map = contracts["ce"]
+            pe_map = contracts["pe"]
+
+            strike_interval = 50
+            atm = round(spot / strike_interval) * strike_interval
+
+            result: Dict[str, str] = {}
+            for offset in (0, 1, -1, 2, -2):   # ATM ±2 strikes
+                strike = atm + offset * strike_interval
+                if strike in ce_map:
+                    t = str(ce_map[strike]["token"])
+                    sym = ce_map[strike]["symbol"]
+                    result[t] = f"NIFTY {strike} CE"
+                    SYMBOL_TOKENS[sym] = {"token": t, "symbol": sym, "exchange": "NFO"}
+                if strike in pe_map:
+                    t = str(pe_map[strike]["token"])
+                    sym = pe_map[strike]["symbol"]
+                    result[t] = f"NIFTY {strike} PE"
+                    SYMBOL_TOKENS[sym] = {"token": t, "symbol": sym, "exchange": "NFO"}
+
+            logger.info(f"Depth subscription: resolved {len(result)} ATM option tokens around {atm}")
+            return result
+        except Exception as e:
+            logger.error(f"ATM token resolution error: {e}")
+            return {}
+
     def start_websocket(self, on_data_callback=None):
-        """Start real-time WebSocket feed."""
+        """Start real-time WebSocket feed.
+
+        Two simultaneous subscriptions:
+          • mode=1 (LTP)       — NIFTY + INDIAVIX + NIFTY_FUT  (existing behaviour)
+          • mode=3 (SNAP_QUOTE) — NIFTY + NIFTY_FUT + ATM options  (new depth feed)
+        """
         if not self._connected:
             self.login()
 
@@ -536,6 +581,16 @@ class MarketDataService:
             market_state_manager.initialize_from_history("NIFTY", candles)
         logger.info("Market State Manager initialized.")
 
+        # ── Build depth token labels: NIFTY + FUT + ATM options ──
+        self._depth_token_labels = {
+            SYMBOL_TOKENS["NIFTY"]["token"]: "NIFTY",
+        }
+        if fut_token:
+            self._depth_token_labels[fut_token] = "NIFTY_FUT"
+
+        atm_tokens = self._resolve_atm_option_tokens()
+        self._depth_token_labels.update(atm_tokens)
+
         try:
             self.ws = SmartWebSocketV2(
                 self.auth_token,
@@ -544,15 +599,102 @@ class MarketDataService:
                 self.feed_token,
             )
 
-            # Build subscription list — NSE cash index + NFO futures/options
-            nse_tokens = [SYMBOL_TOKENS["NIFTY"]["token"]]
+            # ── Subscription lists ──
+            # mode=1: LTP feed (existing)
+            nse_ltp_tokens = [SYMBOL_TOKENS["NIFTY"]["token"]]
             if SYMBOL_TOKENS.get("INDIAVIX", {}).get("token"):
-                nse_tokens.append(SYMBOL_TOKENS["INDIAVIX"]["token"])
-            nfo_tokens = [fut_token] if fut_token else []
+                nse_ltp_tokens.append(SYMBOL_TOKENS["INDIAVIX"]["token"])
+            nfo_ltp_tokens = [fut_token] if fut_token else []
 
-            token_list = [{"exchangeType": 1, "tokens": nse_tokens}]
-            if nfo_tokens:
-                token_list.append({"exchangeType": 2, "tokens": nfo_tokens})
+            ltp_token_list = [{"exchangeType": 1, "tokens": nse_ltp_tokens}]
+            if nfo_ltp_tokens:
+                ltp_token_list.append({"exchangeType": 2, "tokens": nfo_ltp_tokens})
+
+            # mode=3: SNAP_QUOTE depth feed (NIFTY + FUT + ATM options)
+            depth_nse_tokens = [SYMBOL_TOKENS["NIFTY"]["token"]]
+            depth_nfo_tokens = [t for t in self._depth_token_labels if t != SYMBOL_TOKENS["NIFTY"]["token"]]
+
+            depth_token_list = [{"exchangeType": 1, "tokens": depth_nse_tokens}]
+            if depth_nfo_tokens:
+                depth_token_list.append({"exchangeType": 2, "tokens": depth_nfo_tokens})
+
+            def _parse_depth_levels(raw_levels: list, price_divisor: float = 100.0) -> list:
+                """Normalise best_5_buy/sell_data from WS tick into clean dicts."""
+                result = []
+                for lvl in (raw_levels or []):
+                    try:
+                        raw_price = lvl.get("price", 0)
+                        qty       = int(lvl.get("quantity", 0) or 0)
+                        orders    = int(lvl.get("num_orders", lvl.get("numOrders", 0)) or 0)
+                        # WS prices come as integers (paisa) like LTP
+                        price_val = float(raw_price) / price_divisor if raw_price else 0.0
+                        result.append({"price": price_val, "quantity": qty, "orders": orders})
+                    except Exception:
+                        continue
+                return result
+
+            def _compute_depth_payload(token: str, tick: dict) -> Optional[dict]:
+                """Extract and compute depth metrics from a SNAP_QUOTE tick."""
+                label = self._depth_token_labels.get(token, token)
+
+                buy_raw  = tick.get("best_5_buy_data")  or tick.get("best5BuyData")  or []
+                sell_raw = tick.get("best_5_sell_data") or tick.get("best5SellData") or []
+
+                # Some versions of SmartAPI WS send depth as snake_case or camelCase
+                total_buy_qty  = int(tick.get("total_buy_quantity")  or tick.get("totalBuyQty")  or 0)
+                total_sell_qty = int(tick.get("total_sell_quantity") or tick.get("totalSellQty") or 0)
+
+                # If WS didn't send aggregates, sum from depth levels
+                if (not total_buy_qty) and buy_raw:
+                    total_buy_qty = sum(int(l.get("quantity", 0) or 0) for l in buy_raw)
+                if (not total_sell_qty) and sell_raw:
+                    total_sell_qty = sum(int(l.get("quantity", 0) or 0) for l in sell_raw)
+
+                if not buy_raw and not sell_raw and not total_buy_qty and not total_sell_qty:
+                    return None  # no depth in this tick
+
+                buy_levels  = _parse_depth_levels(buy_raw)
+                sell_levels = _parse_depth_levels(sell_raw)
+
+                # Order Book Imbalance: +1 = pure buy pressure, -1 = pure sell pressure
+                total = total_buy_qty + total_sell_qty
+                obi = round((total_buy_qty - total_sell_qty) / total, 4) if total else 0.0
+
+                # Best bid/ask spread
+                best_bid = buy_levels[0]["price"]  if buy_levels  else 0.0
+                best_ask = sell_levels[0]["price"] if sell_levels else 0.0
+                spread   = round(best_ask - best_bid, 2) if best_bid and best_ask else 0.0
+
+                # Pressure label
+                if obi > 0.25:
+                    pressure = "STRONG_BUY"
+                elif obi > 0.08:
+                    pressure = "MILD_BUY"
+                elif obi < -0.25:
+                    pressure = "STRONG_SELL"
+                elif obi < -0.08:
+                    pressure = "MILD_SELL"
+                else:
+                    pressure = "NEUTRAL"
+
+                # LTP for the instrument
+                raw_ltp = tick.get("last_traded_price") or tick.get("ltp", 0)
+                ltp_val = float(raw_ltp) / 100.0 if raw_ltp else 0.0
+
+                payload = {
+                    "token":           token,
+                    "label":           label,
+                    "ltp":             ltp_val,
+                    "buy_depth":       buy_levels,
+                    "sell_depth":      sell_levels,
+                    "total_buy_qty":   total_buy_qty,
+                    "total_sell_qty":  total_sell_qty,
+                    "obi":             obi,
+                    "pressure":        pressure,
+                    "bid_ask_spread":  spread,
+                }
+                cache.set(f"depth:{token}", payload, ttl=10)
+                return payload
 
             def on_data(wsapp, message):
                 try:
@@ -566,6 +708,14 @@ class MarketDataService:
                             continue
                         token = str(token)
 
+                        # ── Depth path: token belongs to our depth subscription ──
+                        if token in self._depth_token_labels:
+                            depth_payload = _compute_depth_payload(token, tick)
+                            if depth_payload:
+                                for cb in self._depth_callbacks:
+                                    cb(depth_payload)
+
+                        # ── LTP / price path (existing, unchanged) ──
                         # Resolve symbol from token
                         symbol = None
                         for sym_name, info in SYMBOL_TOKENS.items():
@@ -577,7 +727,6 @@ class MarketDataService:
 
                         # Smart API v2 WebSocket sends prices as integers (paisa).
                         # e.g. last_traded_price=2300125 means ₹23,001.25
-                        # Divisor: 100 for prices.
                         raw_ltp = tick.get("last_traded_price") or tick.get("ltp", 0)
                         if not raw_ltp:
                             continue
@@ -598,9 +747,9 @@ class MarketDataService:
 
                         try:
                             price = float(raw_ltp) / 100.0
-                            vol = int(raw_vol) if raw_vol else 0
-                            high = float(raw_high) / 100.0 if raw_high else None
-                            low = float(raw_low) / 100.0 if raw_low else None
+                            vol   = int(raw_vol) if raw_vol else 0
+                            high  = float(raw_high) / 100.0 if raw_high else None
+                            low   = float(raw_low)  / 100.0 if raw_low  else None
                         except (ValueError, TypeError):
                             continue
 
@@ -624,7 +773,14 @@ class MarketDataService:
 
             def on_open(wsapp):
                 logger.info("WebSocket connected")
-                self.ws.subscribe("abc123", 1, token_list)
+                # Subscribe mode=1 (LTP) — existing behaviour
+                self.ws.subscribe("ltp_feed", 1, ltp_token_list)
+                # Subscribe mode=3 (SNAP_QUOTE) — new depth feed
+                self.ws.subscribe("depth_feed", 3, depth_token_list)
+                logger.info(
+                    f"Depth feed subscribed for {len(self._depth_token_labels)} tokens: "
+                    + ", ".join(self._depth_token_labels.values())
+                )
 
             def on_error(wsapp, error):
                 logger.error(f"WebSocket error: {error}")
@@ -643,6 +799,61 @@ class MarketDataService:
 
     def register_ws_callback(self, callback):
         self._ws_callbacks.append(callback)
+
+    def register_depth_callback(self, callback):
+        """Register a callback for depth tick payloads from mode=3 subscription."""
+        self._depth_callbacks.append(callback)
+
+    # ── Trade Book & Positions ──
+
+    def get_trade_book(self) -> List[Dict]:
+        """Fetch today's executed trades from Angel One.
+        Returns all trades; caller should filter for Nifty NFO options.
+        """
+        self.ensure_connected()
+        try:
+            _throttle()
+            data = self.smart_api.tradeBook()
+            if data and data.get("status") and data.get("data"):
+                trades = data["data"] or []
+                logger.info(f"Trade book fetched: {len(trades)} trades")
+                return trades
+            logger.warning(f"Trade book returned no data: {data.get('message') if data else 'no response'}")
+            return []
+        except Exception as e:
+            logger.error(f"Trade book fetch error: {e}")
+            return []
+
+    def get_positions(self) -> List[Dict]:
+        """Fetch current positions with realised & unrealised P&L from Angel One."""
+        self.ensure_connected()
+        try:
+            _throttle()
+            data = self.smart_api.position()
+            if data and data.get("status") and data.get("data"):
+                positions = data["data"] or []
+                logger.info(f"Positions fetched: {len(positions)} positions")
+                return positions
+            logger.warning(f"Positions returned no data: {data.get('message') if data else 'no response'}")
+            return []
+        except Exception as e:
+            logger.error(f"Positions fetch error: {e}")
+            return []
+
+    def get_order_book(self) -> List[Dict]:
+        """Fetch today's order book (includes pending/cancelled orders)."""
+        self.ensure_connected()
+        try:
+            _throttle()
+            data = self.smart_api.orderBook()
+            if data and data.get("status") and data.get("data"):
+                orders = data["data"] or []
+                logger.info(f"Order book fetched: {len(orders)} orders")
+                return orders
+            return []
+        except Exception as e:
+            logger.error(f"Order book fetch error: {e}")
+            return []
 
     def stop_websocket(self):
         if self.ws:

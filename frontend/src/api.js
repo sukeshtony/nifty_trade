@@ -102,4 +102,33 @@ export const fetchPaperTradeHistory = async () => {
   return data;
 };
 
+// ── Angel One Trades ──
+
+export const fetchAngelLiveTrades = async () => {
+  const { data } = await api.get('/angel/trades/today/live');
+  return data;
+};
+
+export const fetchAngelPositions = async () => {
+  const { data } = await api.get('/angel/trades/today/positions');
+  return data;
+};
+
+export const syncAngelTrades = async () => {
+  const { data } = await api.post('/angel/trades/sync');
+  return data;
+};
+
+export const fetchAngelTradeHistory = async (limit = 100, optionType = null) => {
+  const params = new URLSearchParams({ limit });
+  if (optionType) params.append('option_type', optionType);
+  const { data } = await api.get(`/angel/trades/history?${params}`);
+  return data;
+};
+
+export const fetchAngelTradeSummary = async () => {
+  const { data } = await api.get('/angel/trades/summary');
+  return data;
+};
+
 export default api;

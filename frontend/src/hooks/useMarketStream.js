@@ -11,6 +11,11 @@
  *   optionChain   — { spot_price, data: [...strikes], pcr, pcr_interpretation,
  *                     max_pain, oi_support, oi_resistance, dominant_buildup }
  *
+ *   depthData     — object keyed by instrument label (e.g. "NIFTY", "NIFTY_FUT",
+ *                   "NIFTY 24850 CE") containing the latest depth payload:
+ *                   { label, ltp, buy_depth, sell_depth, total_buy_qty,
+ *                     total_sell_qty, obi, pressure, bid_ask_spread }
+ *
  *   connected     — boolean: true while the socket is open
  */
 
@@ -21,6 +26,7 @@ const RECONNECT_DELAY_MS = 3000;
 export function useMarketStream() {
   const [priceData, setPriceData]       = useState(null);
   const [optionChain, setOptionChain]   = useState(null);
+  const [depthData, setDepthData]       = useState({});   // { [label]: payload }
   const [connected, setConnected]       = useState(false);
 
   const wsRef            = useRef(null);
@@ -66,6 +72,25 @@ export function useMarketStream() {
         if (msg.type === 'option_chain') {
           setOptionChain(msg);
         }
+
+        if (msg.type === 'depth') {
+          // Update just the one instrument that arrived — preserve others
+          const label = msg.label || msg.token;
+          setDepthData(prev => ({
+            ...prev,
+            [label]: {
+              label:          msg.label,
+              ltp:            msg.ltp          ?? 0,
+              buy_depth:      msg.buy_depth    ?? [],
+              sell_depth:     msg.sell_depth   ?? [],
+              total_buy_qty:  msg.total_buy_qty  ?? 0,
+              total_sell_qty: msg.total_sell_qty ?? 0,
+              obi:            msg.obi          ?? 0,
+              pressure:       msg.pressure     ?? 'NEUTRAL',
+              bid_ask_spread: msg.bid_ask_spread ?? 0,
+            },
+          }));
+        }
       } catch (_) {}
     };
 
@@ -92,5 +117,5 @@ export function useMarketStream() {
     };
   }, [connect]);
 
-  return { priceData, optionChain, connected };
+  return { priceData, optionChain, depthData, connected };
 }

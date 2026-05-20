@@ -1,8 +1,12 @@
-"""WebSocket router — pushes live market ticks and option chain to all connected browsers.
+"""WebSocket router — pushes live market ticks, option chain, and order book depth
+to all connected browsers.
 
 Architecture:
     Angel One WS tick → market_state_manager.update_tick() → broadcast_from_thread()
         → asyncio.run_coroutine_threadsafe → manager.broadcast() → every browser client
+
+    Angel One WS depth tick (mode=3) → _depth_callback → broadcast_from_thread()
+        → manager.broadcast() → every browser client
 
 Message types sent to frontend:
     { "type": "tick",         price, change, change_pct, ema_9, ema_21, vwap,
@@ -10,6 +14,10 @@ Message types sent to frontend:
 
     { "type": "option_chain", spot_price, data: [...strikes], pcr,
                               max_pain, oi_support, oi_resistance, dominant_buildup }
+
+    { "type": "depth",        token, label, ltp, buy_depth, sell_depth,
+                              total_buy_qty, total_sell_qty, obi, pressure,
+                              bid_ask_spread }
 """
 
 import asyncio
@@ -95,6 +103,29 @@ def make_tick_broadcast_callback():
         }
         broadcast_from_thread(msg)
     return _on_tick
+
+
+def make_depth_broadcast_callback():
+    """Returns a callback to register with market_service.register_depth_callback().
+    Called from the Angel One WebSocket thread on every mode=3 SNAP_QUOTE depth tick.
+    Broadcasts a 'depth' message to all connected browser clients.
+    """
+    def _on_depth(payload: dict) -> None:
+        msg = {
+            "type":           "depth",
+            "token":          payload.get("token", ""),
+            "label":          payload.get("label", ""),
+            "ltp":            payload.get("ltp", 0),
+            "buy_depth":      payload.get("buy_depth", []),
+            "sell_depth":     payload.get("sell_depth", []),
+            "total_buy_qty":  payload.get("total_buy_qty", 0),
+            "total_sell_qty": payload.get("total_sell_qty", 0),
+            "obi":            payload.get("obi", 0),
+            "pressure":       payload.get("pressure", "NEUTRAL"),
+            "bid_ask_spread": payload.get("bid_ask_spread", 0),
+        }
+        broadcast_from_thread(msg)
+    return _on_depth
 
 
 # ── WebSocket endpoint ──

@@ -5,6 +5,7 @@ import ExplanationPanel from '../components/ExplanationPanel';
 import IndicatorPanel from '../components/IndicatorPanel';
 import OptionsChain from '../components/OptionsChain';
 import TradeTracker from '../components/TradeTracker';
+import MarketDepth from '../components/MarketDepth';
 import { fetchCurrentSignal, fetchOptionsAnalysis, fetchActiveTrades, closeTrade } from '../api';
 import { useMarketStream } from '../hooks/useMarketStream';
 
@@ -21,8 +22,8 @@ export default function Dashboard() {
   const [error, setError]               = useState(null);
   const [lastUpdate, setLastUpdate]     = useState(null);
 
-  // ── Live data from WebSocket (price + indicators + option chain) ──
-  const { priceData, optionChain, connected } = useMarketStream();
+  // ── Live data from WebSocket (price + indicators + option chain + depth) ──
+  const { priceData, optionChain, depthData, connected } = useMarketStream();
 
   // Prefer WebSocket price data for NiftyPriceBox — instant updates on every tick
   // Prefer WebSocket option chain for OptionsChain panel — live LTPs every 10 s
@@ -202,6 +203,11 @@ export default function Dashboard() {
       {/* Options Chain — live from WebSocket, falls back to REST */}
       <div style={{ marginBottom: '20px' }}>
         <OptionsChain optionsData={liveOptionsData} />
+      </div>
+
+      {/* Order Book Depth — real-time from mode=3 SNAP_QUOTE WS */}
+      <div style={{ marginBottom: '20px' }}>
+        <MarketDepth depthData={depthData} />
       </div>
 
       {/* Active Trades */}

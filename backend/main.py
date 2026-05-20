@@ -22,11 +22,13 @@ from routers.signals import router as signals_router
 from routers.options import router as options_router
 from routers.trades import router as trades_router
 from routers.paper_trading import router as paper_trading_router
+from routers.angel_trades import router as angel_trades_router
 from routers.ws import (
     router as ws_router,
     set_event_loop,
     broadcast_from_thread,
     make_tick_broadcast_callback,
+    make_depth_broadcast_callback,
     manager as ws_manager,
 )
 
@@ -134,6 +136,54 @@ def _periodic_refresh():
         _stop_event.wait(10)                   # interruptible sleep
 
 
+# ── Angel Trade Auto-Sync thread ───────────────────────────────────────────────
+
+def _angel_trade_auto_sync():
+    """Auto-sync Angel One trade book once at startup + once at 15:35 IST.
+
+    Timeline:
+      1. Wait 30 s after startup (give WebSocket time to login)
+      2. Run first sync — captures any trades already done today
+      3. Then wait until 15:35 IST (after market close) and sync again
+      4. Loop daily
+    """
+    from services.angel_trade_sync import sync_todays_trades
+    from database.connection import SessionLocal
+    from utils.helpers import ist_now
+    import datetime
+
+    # Initial sync — wait for login to complete first
+    _stop_event.wait(30)
+    if not _stop_event.is_set():
+        try:
+            db = SessionLocal()
+            result = sync_todays_trades(db)
+            db.close()
+            logger.info(f"[Auto-Sync] Startup trade sync: {result}")
+        except Exception as e:
+            logger.error(f"[Auto-Sync] Startup sync error: {e}")
+
+    # Wait for 15:35 IST each day and sync again
+    while not _stop_event.is_set():
+        now = ist_now()
+        target = now.replace(hour=15, minute=35, second=0, microsecond=0)
+        if now >= target:
+            # Already past today's target — schedule for tomorrow
+            target = target + datetime.timedelta(days=1)
+        wait_secs = (target - now).total_seconds()
+        logger.info(f"[Auto-Sync] Next market-close sync in {int(wait_secs)}s")
+        _stop_event.wait(wait_secs)
+
+        if not _stop_event.is_set():
+            try:
+                db = SessionLocal()
+                result = sync_todays_trades(db)
+                db.close()
+                logger.info(f"[Auto-Sync] Market-close trade sync: {result}")
+            except Exception as e:
+                logger.error(f"[Auto-Sync] Market-close sync error: {e}")
+
+
 # ── WebSocket startup thread ───────────────────────────────────────────────────
 
 def _background_startup():
@@ -159,13 +209,20 @@ async def lifespan(app: FastAPI):
 
     # 2. Register tick broadcast callback on market state manager
     from services.market_state import market_state_manager
+    from services.market_data_service import market_service as _mds
     market_state_manager.register_callback(make_tick_broadcast_callback())
+
+    # 2b. Register depth broadcast callback on market data service
+    _mds.register_depth_callback(make_depth_broadcast_callback())
 
     # 3. Start Angel One WebSocket in background thread
     threading.Thread(target=_background_startup, daemon=True).start()
 
     # 4. Start tiered background refresh thread
     threading.Thread(target=_periodic_refresh, daemon=True).start()
+
+    # 5. Start Angel One trade auto-sync thread
+    threading.Thread(target=_angel_trade_auto_sync, daemon=True).start()
 
     yield
 
@@ -243,6 +300,7 @@ app.include_router(signals_router)
 app.include_router(options_router)
 app.include_router(trades_router)
 app.include_router(paper_trading_router)
+app.include_router(angel_trades_router)
 
 
 # ── Health ─────────────────────────────────────────────────────────────────────
